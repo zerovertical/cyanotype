@@ -1,0 +1,63 @@
+# Build the APK on GitHub's runners so nothing has to be installed on Windows.
+#
+# Put this at .github/workflows/android.yml
+# The APK lands in the run's Artifacts section, ready to sideload.
+
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # The Android SDK is preinstalled on the runner; only the JDK needs picking.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Copy the web app into place
+        # The web build is just static files, so this is a copy rather than a build step.
+        run: |
+          mkdir -p www
+          cp -r web/* www/
+
+      - name: Generate the Android project if it is not committed
+        run: |
+          if [ ! -d android ]; then npx cap add android; fi
+
+      - name: Sync web assets and plugins
+        run: npx cap sync android
+
+      - name: Build the debug APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Name the APK after the commit
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/app-debug.apk \
+             "out/cyanotype-${GITHUB_SHA::7}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cyanotype-apk
+          path: out/*.apk
+          retention-days: 30

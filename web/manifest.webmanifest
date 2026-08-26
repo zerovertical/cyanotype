@@ -1,0 +1,16 @@
+{
+  "name": "Cyanotype — offline peer chat",
+  "short_name": "Cyanotype",
+  "description": "Serverless peer-to-peer chat. Pair phones by QR, then talk directly with no servers and no internet.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A2239",
+  "theme_color": "#0A2239",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
