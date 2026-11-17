@@ -1,5 +1,12 @@
-www/ 
-node_modules/ 
-android/app/build/ 
-android/.gradle/ 
+www/
+node_modules/
+android/app/build/
+android/.gradle/
 .idea/
+out/
+
+# Signing key and the secrets file the key script writes. Never commit these.
+signing/
+*.p12
+*.jks
+*.keystore
