@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Timer probe</title>
+<style>
+  :root{--ink:#0A2239;--raised:#10314F;--line:#1F4B73;--text:#DCE8F2;--muted:#7BA0BE;
+        --aqua:#46D6B4;--amber:#E8B33C;--coral:#FF6E5C;
+        --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--text);font:16px/1.5 system-ui,sans-serif;
+       padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
+  h1{font-family:var(--mono);font-size:19px;margin:0 0 4px}
+  p{color:var(--muted);font-size:14px;margin:0 0 14px}
+  .big{font-family:var(--mono);font-size:40px;color:var(--aqua);margin:10px 0 2px}
+  .row{display:flex;justify-content:space-between;gap:12px;border:1px solid var(--line);
+       background:var(--raised);padding:11px 13px;margin-bottom:1px;font-size:14px}
+  .row b{font-family:var(--mono);font-weight:600}
+  .ok{color:var(--aqua)} .warn{color:var(--amber)} .bad{color:var(--coral)}
+  button{font:inherit;width:100%;padding:14px;margin-bottom:9px;border-radius:2px;
+         background:var(--raised);color:var(--text);border:1px solid var(--line);
+         border-left:3px solid var(--aqua);font-family:var(--mono)}
+  #gaps{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:pre-wrap;
+        border:1px dashed var(--line);padding:11px;margin-top:12px;max-height:38vh;overflow:auto}
+</style>
+</head>
+<body>
+
+<h1>Timer probe</h1>
+<p>Leave this open, lock the phone, wait five minutes, unlock. The gaps below
+   show whether JavaScript kept running.</p>
+
+<div class="big" id="elapsed">0:00</div>
+<div class="row"><span>Ticks recorded</span><b id="ticks">0</b></div>
+<div class="row"><span>Longest gap</span><b id="worst">—</b></div>
+<div class="row"><span>Time hidden</span><b id="hidden">0:00</b></div>
+<div class="row"><span>Verdict</span><b id="verdict">running…</b></div>
+
+<button id="reset">Reset</button>
+<button id="copy">Copy results</button>
+
+<div id="gaps">Gaps over 2s will be listed here.</div>
+
+<script>
+/* A one-second interval is the simplest honest test of throttling. If Android
+   freezes the process, ticks stop entirely and one enormous gap appears. If
+   Chromium merely throttles a hidden page, ticks continue at a stretched
+   interval — typically a minute. The two look completely different, which is
+   the point: they call for different fixes. */
+const $ = id => document.getElementById(id);
+const started = Date.now();
+let last = Date.now();
+let ticks = 0, worst = 0, hiddenMs = 0, hiddenSince = null;
+const gaps = [];
+
+const mmss = ms => {
+  const s = Math.round(ms / 1000);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+};
+
+function tick() {
+  const now = Date.now();
+  const gap = now - last;
+  last = now;
+  ticks++;
+
+  if (gap > 2000) {
+    gaps.unshift(new Date(now).toLocaleTimeString() + "   gap " + (gap / 1000).toFixed(1) + "s");
+    if (gap > worst) worst = gap;
+  }
+
+  $("elapsed").textContent = mmss(now - started);
+  $("ticks").textContent = ticks;
+  $("worst").textContent = worst ? (worst / 1000).toFixed(1) + "s" : "none over 2s";
+  $("hidden").textContent = mmss(hiddenMs + (hiddenSince ? now - hiddenSince : 0));
+  if (gaps.length) $("gaps").textContent = gaps.slice(0, 60).join("\n");
+
+  const v = $("verdict");
+  if (!worst) { v.textContent = "no throttling seen"; v.className = "ok"; }
+  else if (worst < 70000) { v.textContent = "throttled, still alive"; v.className = "warn"; }
+  else { v.textContent = "frozen for " + Math.round(worst / 1000) + "s"; v.className = "bad"; }
+}
+setInterval(tick, 1000);
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) hiddenSince = Date.now();
+  else if (hiddenSince) { hiddenMs += Date.now() - hiddenSince; hiddenSince = null; }
+});
+
+$("reset").onclick = () => location.reload();
+$("copy").onclick = () => {
+  const txt = [
+    "elapsed " + $("elapsed").textContent,
+    "ticks " + ticks,
+    "longest gap " + $("worst").textContent,
+    "hidden " + $("hidden").textContent,
+    "verdict " + $("verdict").textContent,
+    "", ...gaps.slice(0, 40)
+  ].join("\n");
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(
+    () => alert("Copied."), () => alert(txt));
+  else alert(txt);
+};
+</script>
+</body>
+</html>

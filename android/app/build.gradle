@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+/* The release key comes from the environment (GitHub secrets in CI) and never
+   lives in the repo. Without it, release builds are simply left unsigned and
+   the workflow falls back to a debug build. */
+def releaseKeystore = System.getenv("ANDROID_KEYSTORE_PATH")
+
+/* versionCode must rise with every build or Android refuses the update. CI
+   passes its run number; local builds default to 1. */
+def ciVersionCode = (project.findProperty("versionCode") ?: "1").toString().toInteger()
+def ciVersionName = (project.findProperty("versionName") ?: "dev").toString()
+
 android {
     namespace "net.cyanotype.app"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +17,8 @@ android {
         applicationId "net.cyanotype.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode ciVersionCode
+        versionName ciVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +26,20 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
+                storeType "pkcs12"
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseKeystore) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

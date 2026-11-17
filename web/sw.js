@@ -8,7 +8,7 @@
    3. The swap happens when the page says so, not mid-call.
 */
 
-const VERSION = 'v9';
+const VERSION = 'v11';
 const CACHE = 'cyanotype-' + VERSION;
 
 /* CORE must land or the install fails outright, which leaves the previous
@@ -84,5 +84,22 @@ self.addEventListener('fetch', e => {
     const timeout = new Promise(res => setTimeout(() => res(null), NET_TIMEOUT));
     const winner = await Promise.race([net.catch(() => null), timeout]);
     return winner || hit;
+  })());
+});
+
+/* A tap on a notification. Focus the open app if there is one and tell it
+   which chat to show; otherwise open the app straight onto that chat. */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const convId = e.notification.data && e.notification.data.convId;
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const win = wins[0];
+    if (win) {
+      try { await win.focus(); } catch (err) { /* focus can be refused; still hand over */ }
+      if (convId) win.postMessage({ type: 'open', convId });
+      return;
+    }
+    await self.clients.openWindow(convId ? './?open=' + encodeURIComponent(convId) : './');
   })());
 });

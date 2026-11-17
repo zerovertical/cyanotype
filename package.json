@@ -1,17 +1,19 @@
 {
   "name": "cyanotype-android",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
-  "description": "Android wrapper for Cyanotype. The web app is unchanged; the wrapper exists to keep the process alive while the phone is locked.",
+  "description": "Cyanotype: serverless peer-to-peer chat. The web app lives in web/; the Android wrapper keeps it running while the phone is locked and adds native notifications and file saving.",
   "scripts": {
     "sync": "cap sync android",
-    "add:android": "cap add android"
+    "add:android": "cap add android",
+    "signing-key": "node tools/make-signing-key.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^7.0.0",
-    "@capacitor/core": "^7.0.0"
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/core": "^7.6.10"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.0.0"
+    "@capacitor/cli": "^7.6.10",
+    "node-forge": "^1.4.3"
   }
 }

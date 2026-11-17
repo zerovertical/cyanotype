@@ -45,6 +45,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Message and call alerts buzz the phone -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- QR scanning, voice notes and calls, location sharing -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />

@@ -9,250 +9,318 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
 :root{
-  --ink:#0A2239; --ink-2:#0E2B47; --raised:#10314F; --line:#1F4B73;
-  --paper:#EEF4F8; --text:#DCE8F2; --muted:#7BA0BE;
-  --amber:#E8B33C; --aqua:#46D6B4; --coral:#FF6E5C;
+  --ink:#0B2238; --ink-2:#112C48; --raised:#18395C; --line:#26507A;
+  --paper:#F2F7FB; --text:#E4EEF6; --muted:#93B2CB;
+  --amber:#F0BC4C; --aqua:#4FDDBB; --coral:#FF7A69;
+  --aqua-ink:#05291F;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace;
   --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --pad:clamp(14px,4vw,26px);
+  --pad:clamp(14px,4vw,24px);
+  --r-sm:10px; --r:16px; --r-lg:24px; --pill:999px;
+  --shadow:0 10px 30px rgba(2,10,20,.45);
+  --hair:rgba(147,178,203,.16);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);
-  font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(var(--line) 1px,transparent 1px),
-                   linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:28px 28px;opacity:.13}
+body{margin:0;color:var(--text);font-family:var(--body);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;
+  background:
+    radial-gradient(900px 520px at 0% -10%,rgba(79,221,187,.10),transparent 60%),
+    radial-gradient(800px 600px at 110% 0%,rgba(66,132,214,.18),transparent 60%),
+    var(--ink);
+  background-attachment:fixed}
 #app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100dvh;
   max-width:600px;margin:0 auto;
   padding:max(var(--pad),env(safe-area-inset-top)) var(--pad) max(var(--pad),env(safe-area-inset-bottom))}
 
-.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
-  color:var(--muted);margin:0 0 6px}
-h2{font-family:var(--mono);font-weight:600;font-size:20px;letter-spacing:-.01em;margin:0 0 4px}
-p{margin:0 0 14px;color:var(--muted);font-size:14px}
-.dim{color:var(--muted);font-size:13px}
+.eyebrow{font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--aqua);margin:0 0 4px}
+h2{font-weight:700;font-size:22px;letter-spacing:-.01em;line-height:1.25;margin:0 0 6px;color:var(--paper)}
+p{margin:0 0 14px;color:var(--muted);font-size:14.5px}
+.dim{color:var(--muted);font-size:13.5px}
 .mono{font-family:var(--mono)}
 .hide{display:none !important}
+svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+svg.i.fill{fill:currentColor;stroke:none}
 
-/* ---- rail ---- */
-.rail{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:10.5px;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
-  border-bottom:1px solid var(--line);padding-bottom:11px;margin-bottom:18px}
+/* ---- top bar ---- */
+.rail{display:flex;align-items:center;gap:10px;min-height:44px;margin-bottom:16px}
 .rail .spacer{margin-left:auto}
+.brand{font-weight:700;font-size:18px;letter-spacing:-.01em;color:var(--paper)}
+.statusPill{display:inline-flex;align-items:center;gap:8px;background:var(--ink-2);
+  border:1px solid var(--hair);border-radius:var(--pill);padding:6px 13px 6px 11px;
+  font-size:13px;color:var(--muted)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
 .dot.wait{background:var(--amber);animation:pulse 1.6s ease-in-out infinite}
-.dot.live{background:var(--aqua);box-shadow:0 0 0 4px rgba(70,214,180,.16)}
+.dot.live{background:var(--aqua);box-shadow:0 0 0 4px rgba(79,221,187,.18)}
 .dot.bad{background:var(--coral)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ---- buttons ---- */
-button{font:inherit;cursor:pointer;border-radius:2px;transition:transform .12s,background .16s,border-color .16s}
-button:focus-visible{outline:2px solid var(--aqua);outline-offset:3px}
-button:active{transform:translateY(1px)}
-.btn{display:block;width:100%;text-align:left;padding:15px 17px;background:var(--raised);
-  color:var(--text);border:1px solid var(--line);border-left:3px solid var(--aqua);
-  font-family:var(--mono);font-size:14.5px;margin-bottom:9px}
-.btn:hover{background:#14395c}
-.btn .sub{display:block;font-family:var(--body);font-size:12.5px;color:var(--muted);margin-top:2px}
-.btn.alt{border-left-color:var(--amber)}
-.btn.ghost{background:transparent;border-left-color:var(--line);text-align:center;padding:12px}
+button{font:inherit;cursor:pointer;border-radius:var(--r);transition:transform .12s,background .16s,border-color .16s,opacity .16s}
+button:focus-visible,a:focus-visible,textarea:focus-visible{outline:2px solid var(--aqua);outline-offset:3px}
+button:active{transform:scale(.98)}
+.btn{display:block;width:100%;text-align:left;padding:15px 18px;background:var(--raised);
+  color:var(--text);border:1px solid var(--hair);border-radius:var(--r);
+  font-size:15.5px;font-weight:600;margin-bottom:10px}
+.btn:hover{background:#1D4269}
+.btn .sub{display:block;font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
+.btn.primary{background:var(--aqua);color:var(--aqua-ink);border-color:transparent;
+  box-shadow:0 8px 22px rgba(79,221,187,.22)}
+.btn.primary:hover{background:#68E6C7}
+.btn.primary .sub{color:rgba(5,41,31,.72)}
+.btn.alt{background:var(--raised)}
+.btn.ghost{background:transparent;border-color:var(--hair);text-align:center;padding:12px;font-weight:500;color:var(--muted)}
+.btn.ghost:hover{background:rgba(255,255,255,.04);color:var(--text)}
 .btn.ghost .sub{display:none}
-.iconBtn{background:var(--raised);border:1px solid var(--line);color:var(--text);
-  width:40px;height:40px;flex:none;font-size:16px;line-height:1}
+.btn.danger{color:var(--coral)}
+.btn.danger .sub{color:var(--muted)}
+.btn.danger:hover{background:rgba(255,122,105,.10)}
+.actRow{display:flex;gap:10px}
+.actRow .btn{flex:1}
+.iconBtn{display:grid;place-items:center;background:var(--raised);border:1px solid var(--hair);
+  color:var(--text);width:44px;height:44px;flex:none;border-radius:50%;padding:0}
+.iconBtn:hover{background:#1D4269}
 .iconBtn.rec{background:var(--coral);border-color:var(--coral);color:#2A0A06;animation:pulse 1s infinite}
+.linkBtn{display:inline-flex;align-items:center;gap:6px;background:rgba(79,221,187,.10);border:0;
+  color:var(--aqua);padding:9px 14px;border-radius:var(--pill);font-size:14px;font-weight:600}
+.linkBtn:hover{background:rgba(79,221,187,.18)}
 
 /* ---- tabs + lists ---- */
-.tabs{display:flex;gap:0;border:1px solid var(--line);margin-bottom:14px}
-.tab{flex:1;background:transparent;border:0;color:var(--muted);padding:11px;
-  font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
-.tab.sel{background:var(--raised);color:var(--text)}
+.tabs,.seg{display:flex;gap:4px;background:var(--ink-2);border:1px solid var(--hair);
+  border-radius:var(--pill);padding:4px;margin-bottom:14px}
+.tab,.seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:9px 6px;
+  border-radius:var(--pill);font-size:14px;font-weight:600;display:inline-flex;align-items:center;
+  justify-content:center;gap:7px}
+.tab.sel,.seg button.sel{background:var(--raised);color:var(--paper);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.seg{margin:8px 0 0}
+.seg button{font-size:13px;padding:8px 4px}
 .pane{flex:1;min-height:80px}
-.list{display:flex;flex-direction:column;gap:1px;margin-bottom:18px}
-.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
-  background:var(--ink-2);border:1px solid var(--line);padding:12px 13px;color:var(--text)}
+.paneHead{display:flex;justify-content:flex-end;margin-bottom:10px}
+.list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.row{display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  background:var(--ink-2);border:1px solid var(--hair);border-radius:var(--r-lg);
+  padding:12px 14px;color:var(--text)}
 .row:not(.static):hover{background:var(--raised)}
 .row.static{cursor:default}
-.avatar{width:38px;height:38px;flex:none;display:grid;place-items:center;background:var(--raised);
-  border:1px solid var(--line);font-family:var(--mono);font-size:13px;color:var(--aqua)}
-.avatar.group{color:var(--amber)}
-.rowMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.avatar{--h:200;position:relative;width:46px;height:46px;flex:none;display:grid;place-items:center;
+  border-radius:50%;font-size:16px;font-weight:700;
+  background:hsl(var(--h) 42% 30%);color:hsl(var(--h) 85% 86%)}
+.avatar.group{border-radius:15px}
+.avatar .pip{position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;
+  border:2.5px solid var(--ink-2);box-shadow:none}
+.rowMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .rowTop{display:flex;align-items:baseline;gap:8px}
-.rowName{font-size:15px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rowTime{font-family:var(--mono);font-size:10.5px;color:var(--muted);flex:none}
-.rowSub{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pip{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
-.pip.on{background:var(--aqua);box-shadow:0 0 0 3px rgba(70,214,180,.15)}
+.rowName{font-size:16px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rowTime{font-size:12px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.rowBottom{display:flex;align-items:center;gap:8px}
+.rowSub{flex:1;min-width:0;font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.unread .rowSub{color:var(--text)}
+.row.unread .rowTime{color:var(--aqua);font-weight:600}
+.badge{min-width:22px;height:22px;padding:0 7px;border-radius:var(--pill);background:var(--aqua);
+  color:var(--aqua-ink);font-size:12px;font-weight:700;display:inline-grid;place-items:center;flex:none}
+.tab .badge{min-width:20px;height:20px;font-size:11.5px}
+.pip{width:9px;height:9px;border-radius:50%;background:#55708A;flex:none}
+.pip.on{background:var(--aqua)}
 .pip.away{background:var(--amber)}
-.empty{border:1px dashed var(--line);padding:22px 18px;text-align:center}
+.empty{background:var(--ink-2);border:1px dashed var(--line);border-radius:var(--r-lg);
+  padding:26px 20px;text-align:center}
+.empty svg.i{width:40px;height:40px;margin:0 auto 10px;color:var(--aqua);stroke-width:1.6}
 .empty p{margin:0 0 6px}
+.empty p:first-of-type{color:var(--paper);font-weight:600;font-size:16px}
 .actions{margin-top:auto;padding-top:8px}
 
-/* ---- plate (signature) ---- */
-.plate{position:relative;background:var(--paper);padding:18px;margin:0 0 16px;border-radius:2px;
-  box-shadow:0 12px 40px rgba(0,0,0,.45)}
-.plate canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
-.plate::before,.plate::after{content:"";position:absolute;width:13px;height:13px;pointer-events:none}
-.plate::before{top:6px;left:6px;border-top:1.5px solid var(--ink);border-left:1.5px solid var(--ink)}
-.plate::after{bottom:6px;right:6px;border-bottom:1.5px solid var(--ink);border-right:1.5px solid var(--ink)}
-.plate .stamp{position:absolute;bottom:7px;left:9px;font-family:var(--mono);font-size:9px;
-  letter-spacing:.16em;text-transform:uppercase;color:#8FA6B8}
+/* ---- QR plate ---- */
+.plate{position:relative;background:var(--paper);padding:20px 20px 28px;margin:0 0 16px;
+  border-radius:var(--r-lg);box-shadow:0 14px 40px rgba(0,0,0,.45)}
+.plate canvas{display:block;width:100%;height:auto;image-rendering:pixelated;border-radius:6px}
+.plate .stamp{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:11px;
+  color:#7D93A6;letter-spacing:.04em}
 
 /* ---- scanner ---- */
-.scanner{position:relative;background:#000;border:1px solid var(--line);border-radius:2px;
-  overflow:hidden;aspect-ratio:1;margin-bottom:16px}
+.scanner{position:relative;background:#000;border-radius:var(--r-lg);overflow:hidden;
+  aspect-ratio:1;margin-bottom:16px;box-shadow:var(--shadow)}
 .scanner video{width:100%;height:100%;object-fit:cover;display:block}
 .reticle{position:absolute;inset:14%;pointer-events:none}
-.reticle span{position:absolute;width:26px;height:26px;border:2px solid var(--aqua)}
-.reticle span:nth-child(1){top:0;left:0;border-right:0;border-bottom:0}
-.reticle span:nth-child(2){top:0;right:0;border-left:0;border-bottom:0}
-.reticle span:nth-child(3){bottom:0;left:0;border-right:0;border-top:0}
-.reticle span:nth-child(4){bottom:0;right:0;border-left:0;border-top:0}
+.reticle span{position:absolute;width:34px;height:34px;border:3px solid var(--aqua)}
+.reticle span:nth-child(1){top:0;left:0;border-right:0;border-bottom:0;border-top-left-radius:16px}
+.reticle span:nth-child(2){top:0;right:0;border-left:0;border-bottom:0;border-top-right-radius:16px}
+.reticle span:nth-child(3){bottom:0;left:0;border-right:0;border-top:0;border-bottom-left-radius:16px}
+.reticle span:nth-child(4){bottom:0;right:0;border-left:0;border-top:0;border-bottom-right-radius:16px}
 
 /* ---- safety ---- */
-.safety{border:1px solid var(--line);background:var(--ink-2);padding:15px 16px;margin-bottom:16px}
-.safety .grid{font-family:var(--mono);font-size:15px;letter-spacing:.1em;
-  display:grid;grid-template-columns:repeat(4,1fr);gap:7px 10px;color:var(--paper)}
+.safety{background:var(--ink-2);border:1px solid var(--hair);border-radius:var(--r-lg);padding:14px;margin-bottom:16px}
+.safety .grid{font-family:var(--mono);font-size:16px;letter-spacing:.08em;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;color:var(--paper)}
+.safety .grid>*{background:var(--ink);border-radius:var(--r-sm);padding:8px 0;text-align:center}
 .field{display:block;margin-bottom:14px}
 .field input{width:100%;background:var(--ink-2);border:1px solid var(--line);color:var(--text);
-  padding:12px 13px;border-radius:2px;font:inherit;font-size:16px;margin-top:5px}
-.field input:focus{outline:none;border-color:var(--aqua)}
+  padding:13px 15px;border-radius:var(--r);font:inherit;font-size:16px;margin-top:6px}
+.field input:focus{outline:none;border-color:var(--aqua);box-shadow:0 0 0 3px rgba(79,221,187,.18)}
 
 /* ---- chat ---- */
 .screen{display:none;flex-direction:column;flex:1;min-height:0}
 .screen.on{display:flex}
-.chatHead{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);
-  padding-bottom:12px;margin-bottom:12px}
-.chatHead>div{flex:1;min-width:0}
-.chatSub{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#s-chat{position:relative}
+body.inChat{overflow:hidden}
+body.inChat #app{height:100dvh;min-height:0}
+.chatHead{display:flex;align-items:center;gap:8px;padding-bottom:12px;margin-bottom:4px;
+  border-bottom:1px solid var(--hair)}
+.chatTitleBtn{flex:1;min-width:0;background:transparent;border:0;color:inherit;text-align:left;
+  padding:4px 6px;margin-left:-6px;border-radius:var(--r-sm)}
+.chatTitleBtn:hover{background:rgba(255,255,255,.04)}
+.chatName{display:block;font-size:19px;font-weight:700;color:var(--paper);line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chatSub{display:block;font-size:13px;color:var(--muted)}
 .chatSub.online{color:var(--aqua)}
 .chatSub.away{color:var(--amber)}
-.log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 0 12px;
+.log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px 2px 12px;
   min-height:100px;-webkit-overflow-scrolling:touch}
-.msg{max-width:82%;padding:9px 12px;border-radius:2px;font-size:15px;word-wrap:break-word;
-  animation:rise .2s ease-out}
-@keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.msg.me{align-self:flex-end;background:var(--aqua);color:#062A22}
-.msg.them{align-self:flex-start;background:var(--raised);border:1px solid var(--line)}
-.msg .who{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--amber);margin-bottom:3px}
-.msg .t{display:block;font-family:var(--mono);font-size:10px;opacity:.6;margin-top:3px;letter-spacing:.06em}
-.msg .att{display:block;max-width:100%;border-radius:2px;margin:2px 0}
-audio.att{width:230px;max-width:100%}
-.composer{display:flex;gap:7px;align-items:center;border-top:1px solid var(--line);padding-top:12px}
-.composer input#msgInput{flex:1;min-width:0;background:var(--ink-2);border:1px solid var(--line);
-  color:var(--text);padding:12px 13px;border-radius:2px;font:inherit;font-size:16px}
-.composer input#msgInput:focus{outline:none;border-color:var(--aqua)}
-.composer #sendBtn{background:var(--aqua);color:#062A22;border:0;padding:0 17px;height:42px;
-  font-family:var(--mono);font-weight:600;letter-spacing:.05em}
+.daySep{align-self:center;font-size:12px;font-weight:600;color:var(--muted);background:var(--ink-2);
+  border:1px solid var(--hair);padding:3px 12px;border-radius:var(--pill);margin:10px 0 4px}
+.msg{max-width:80%;padding:9px 13px 7px;border-radius:20px;font-size:15.5px;line-height:1.4;
+  word-wrap:break-word;white-space:pre-wrap;animation:rise .2s ease-out;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg.me{align-self:flex-end;background:var(--aqua);color:var(--aqua-ink);border-bottom-right-radius:6px}
+.msg.them{align-self:flex-start;background:var(--raised);border-bottom-left-radius:6px}
+.msg .who{display:block;font-size:12.5px;font-weight:700;color:var(--amber);margin-bottom:2px;white-space:normal}
+.msg .t{display:block;text-align:right;font-size:11px;opacity:.62;margin-top:2px;
+  font-variant-numeric:tabular-nums;white-space:normal}
+.msg .att{display:block;max-width:100%;border-radius:14px;margin:2px 0}
+.msg.held{outline:2px solid var(--amber);outline-offset:2px}
+audio.att{width:240px;max-width:100%}
+.jump{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);z-index:5;
+  background:var(--raised);color:var(--paper);border:1px solid var(--line);border-radius:var(--pill);
+  padding:8px 16px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow)}
+.composer{display:flex;gap:8px;align-items:flex-end;padding-top:10px}
+.composer #msgInput{flex:1;min-width:0;background:var(--ink-2);border:1px solid var(--line);
+  color:var(--text);padding:11px 16px;border-radius:22px;font:inherit;font-size:16px;line-height:1.35;
+  resize:none;max-height:132px;min-height:44px;display:block}
+.composer #msgInput:focus{outline:none;border-color:var(--aqua)}
+.composer #sendBtn{background:var(--aqua);color:var(--aqua-ink);border-color:transparent}
+.composer #sendBtn:hover{background:#68E6C7}
 
 /* ---- misc ---- */
-.note{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line);padding-left:11px;margin:14px 0 0}
-.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,140%);z-index:50;
-  background:var(--raised);border:1px solid var(--aqua);border-left-width:3px;color:var(--text);
-  padding:12px 15px;max-width:min(460px,88vw);font-size:13.5px;border-radius:2px;
-  transition:transform .24s ease;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.note{position:relative;font-size:13.5px;color:var(--muted);background:rgba(255,255,255,.03);
+  border:1px solid var(--hair);border-radius:var(--r);padding:11px 13px 11px 43px;margin:14px 0 0}
+.note::before{content:"i";position:absolute;left:13px;top:12px;width:20px;height:20px;border-radius:50%;
+  display:grid;place-items:center;background:rgba(79,221,187,.14);color:var(--aqua);font-weight:700;font-size:12px;font-style:normal}
+body.inChat footer{display:none}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,160%);z-index:50;
+  background:#20476E;color:var(--paper);padding:12px 18px;max-width:min(460px,90vw);font-size:14px;
+  border-radius:var(--r);transition:transform .26s cubic-bezier(.2,.9,.3,1.2);box-shadow:var(--shadow)}
+.toast:not(.on){visibility:hidden;transition:transform .24s ease,visibility 0s .24s}
 .toast.on{transform:translate(-50%,0)}
-.toast.bad{border-color:var(--coral)}
-.toast.tap{cursor:pointer;border-color:var(--amber);padding-right:34px}
-.toast.tap::after{content:"\2192";position:absolute;right:14px;top:50%;transform:translateY(-50%);
-  font-family:var(--mono);color:var(--amber)}
-footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--muted);opacity:.6;border-top:1px solid var(--line);padding-top:11px;margin-top:16px}
+.toast.bad{background:#5A2A33;color:#FFE3DE}
+.toast.tap{cursor:pointer;padding-right:38px;background:#3E3A23;color:#FFF1CC}
+.toast.tap::after{content:"\2192";position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--amber)}
+footer{font-size:12px;color:var(--muted);opacity:.7;padding-top:11px;margin-top:16px}
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 
 /* ---- call ---- */
-.callbar{position:fixed;left:50%;transform:translate(-50%,-160%);top:0;z-index:60;
+.callbar{position:fixed;left:50%;transform:translate(-50%,-180%);top:max(10px,env(safe-area-inset-top));z-index:60;
   width:min(560px,94vw);display:flex;align-items:center;gap:11px;
-  background:var(--raised);border:1px solid var(--aqua);border-top-width:3px;
-  padding:11px 13px;border-radius:0 0 2px 2px;transition:transform .22s ease;
-  box-shadow:0 12px 34px rgba(0,0,0,.55)}
+  background:var(--raised);border:1px solid var(--line);
+  padding:10px 10px 10px 16px;border-radius:var(--pill);transition:transform .22s ease;box-shadow:var(--shadow)}
 .callbar.on{transform:translate(-50%,0)}
-.callbar .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.callbar .n{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.callbar .s{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--muted)}
+.callbar .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:0}
+.callbar .n{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.callbar .s{font-size:12.5px;color:var(--muted)}
 .callbar .s.live{color:var(--aqua)}
-.callbar button{border-radius:2px}
-.hangup{background:var(--coral);border:1px solid var(--coral);color:#2A0A06;
-  width:40px;height:40px;flex:none;font-size:15px}
+.hangup{display:grid;place-items:center;background:var(--coral);border:0;color:#2A0A06;
+  width:44px;height:44px;flex:none;border-radius:50%;padding:0}
 .iconBtn.muted{background:var(--amber);border-color:var(--amber);color:#2E2003}
 
-.sheet{position:fixed;inset:0;z-index:70;display:none;place-items:center;
-  background:rgba(5,17,29,.82);padding:var(--pad)}
-.sheet.on{display:grid}
-.sheet .card{width:min(400px,94vw);background:var(--ink-2);border:1px solid var(--line);
-  border-left:3px solid var(--aqua);padding:20px;border-radius:2px}
+/* ---- sheets: rise from the bottom on phones, float on wide screens ---- */
+.sheet{position:fixed;inset:0;z-index:70;display:none;align-items:end;justify-items:center;
+  background:rgba(4,14,25,.66);padding:0}
+.sheet.on{display:grid;animation:fade .18s ease-out}
+.sheet .card{width:100%;max-width:520px;max-height:88dvh;overflow-y:auto;background:var(--ink-2);
+  border:1px solid var(--hair);border-bottom:0;border-radius:28px 28px 0 0;
+  padding:12px 20px max(20px,env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(0,0,0,.4);
+  animation:sheetUp .26s cubic-bezier(.2,.9,.3,1)}
+.sheet .card::before{content:"";display:block;width:40px;height:5px;border-radius:3px;
+  background:var(--line);margin:0 auto 14px}
+@media (min-width:640px){
+  .sheet{align-items:center;padding:var(--pad)}
+  .sheet .card{border-radius:var(--r-lg);border-bottom:1px solid var(--hair);padding:22px}
+  .sheet .card::before{display:none}
+}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
 .sheet h2{margin-bottom:6px}
-.sheet .row2{display:flex;gap:9px;margin-top:16px}
-.sheet .row2 button{flex:1;padding:14px;border:1px solid var(--line);border-radius:2px;
-  font-family:var(--mono);font-size:14px}
-.accept{background:var(--aqua);color:#062A22;border-color:var(--aqua) !important}
-.decline{background:transparent;color:var(--text)}
+.sheet .row2{display:flex;gap:10px;margin-top:16px}
+.sheet .row2 button{flex:1;padding:15px;border:1px solid var(--hair);border-radius:var(--pill);
+  font-size:15.5px;font-weight:600}
+.accept{background:var(--aqua);color:var(--aqua-ink);border-color:var(--aqua) !important}
+.decline{background:var(--coral);color:#2A0A06;border-color:var(--coral) !important}
 @keyframes ring{0%,100%{opacity:1}50%{opacity:.35}}
 .ringing{animation:ring 1.4s ease-in-out infinite}
+.sheet .card .menuActs{margin-top:14px}
+.sheet .card .menuActs .btn:last-child{margin-bottom:0}
+.sheet .card .field{margin-top:6px}
 
 /* ---- live location ---- */
-.banner{position:fixed;left:50%;bottom:24px;transform:translate(-50%,180%);z-index:55;
+.banner{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,180%);z-index:55;
   width:min(560px,94vw);background:var(--ink-2);border:1px solid var(--amber);
-  border-left-width:3px;padding:12px 14px;border-radius:2px;
-  transition:transform .22s ease;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  padding:14px 16px;border-radius:var(--r-lg);transition:transform .22s ease;box-shadow:var(--shadow)}
 .banner.on{transform:translate(-50%,0)}
 .banner .top{display:flex;align-items:baseline;gap:9px}
-.banner .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--amber);flex:1}
-.banner .cd{font-family:var(--mono);font-size:15px;color:var(--paper)}
-.banner p{margin:5px 0 0;font-size:12.5px}
-.banner .row2{display:flex;gap:8px;margin-top:11px}
-.banner .row2 button{flex:1;padding:11px;border:1px solid var(--line);border-radius:2px;
-  background:transparent;color:var(--text);font-family:var(--mono);font-size:12.5px}
+.banner .lbl{font-size:13px;font-weight:700;color:var(--amber);flex:1}
+.banner .cd{font-size:16px;font-weight:700;color:var(--paper);font-variant-numeric:tabular-nums}
+.banner p{margin:4px 0 0;font-size:13px}
+.banner .row2{display:flex;gap:8px;margin-top:12px}
+.banner .row2 button{flex:1;padding:11px;border:1px solid var(--hair);border-radius:var(--pill);
+  background:transparent;color:var(--text);font-size:13.5px;font-weight:600}
 .banner .row2 .keep{background:var(--amber);color:#2E2003;border-color:var(--amber)}
 .banner.expiring{border-color:var(--coral)}
 .banner.expiring .lbl{color:var(--coral)}
 
 /* ---- attachment cards ---- */
-.card2{display:block;border:1px solid rgba(10,34,57,.28);border-radius:2px;
-  padding:10px 11px;margin:2px 0;min-width:190px}
-.msg.them .card2{border-color:var(--line);background:var(--ink)}
-.card2 .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
-  text-transform:uppercase;opacity:.72;display:block;margin-bottom:4px}
-.card2 .nm{display:block;font-size:14px;word-break:break-word;line-height:1.35}
-.card2 .meta{display:block;font-family:var(--mono);font-size:10.5px;opacity:.68;margin-top:4px;
-  word-break:break-all}
-.card2 .acts{display:flex;gap:7px;margin-top:9px}
-.card2 .acts button,.card2 .acts a{flex:1;text-align:center;padding:8px;border-radius:2px;
-  font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-decoration:none;
-  border:1px solid currentColor;background:transparent;color:inherit;opacity:.85;cursor:pointer}
+.card2{display:block;background:rgba(5,41,31,.08);border-radius:14px;
+  padding:10px 12px;margin:2px 0;min-width:200px;white-space:normal}
+.msg.them .card2{background:var(--ink-2)}
+.card2 .cap{font-size:12px;font-weight:700;opacity:.75;display:block;margin-bottom:2px}
+.card2 .nm{display:block;font-size:14.5px;font-weight:600;word-break:break-word;line-height:1.35}
+.card2 .meta{display:block;font-size:12px;opacity:.7;margin-top:3px;word-break:break-all}
+.card2 .acts{display:flex;gap:8px;margin-top:10px}
+.card2 .acts button,.card2 .acts a{flex:1;text-align:center;padding:8px;border-radius:var(--pill);
+  font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid currentColor;
+  background:transparent;color:inherit;opacity:.88;cursor:pointer}
 .card2 .acts button:hover,.card2 .acts a:hover{opacity:1}
-.tag{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
-  text-transform:uppercase;padding:1px 5px;border:1px solid currentColor;border-radius:2px;
-  margin-left:6px;opacity:.8}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:0 6px;border:1px solid currentColor;
+  border-radius:6px;margin-left:6px;opacity:.8}
 .msg.queued{opacity:.62}
-.ticks{display:inline-block;margin-left:6px;font-family:var(--mono);font-size:11px;
-  letter-spacing:-.16em;vertical-align:baseline}
+.ticks{display:inline-block;margin-left:5px;font-size:11.5px;letter-spacing:-.18em;vertical-align:baseline}
 .ticks.queued{opacity:.55}
 .ticks.sent,.ticks.delivered{opacity:.75}
-.ticks.read{color:#0B3FA8;opacity:1}
-.msg.them .ticks.read{color:#6FA8FF}
-.bar{height:2px;background:rgba(10,34,57,.25);margin-top:8px;overflow:hidden}
+.ticks.read{color:#0B4FC4;opacity:1}
+.msg.them .ticks.read{color:#7FB4FF}
+.bar{height:4px;border-radius:2px;background:rgba(5,41,31,.18);margin-top:8px;overflow:hidden}
 .msg.them .bar{background:var(--line)}
-.bar i{display:block;height:100%;width:0;background:currentColor;transition:width .2s}
+.bar i{display:block;height:100%;width:0;background:currentColor;border-radius:2px;transition:width .2s}
 
 /* ---- reconnect code ---- */
-.codebox{border:1px solid var(--line);background:var(--ink-2);padding:15px 16px;margin-bottom:16px}
+.codebox{background:var(--ink-2);border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px;margin-bottom:16px}
 .codebox .eyebrow{margin-bottom:8px}
-.code{display:block;font-family:var(--mono);font-size:15px;line-height:1.7;letter-spacing:.08em;
+.code{display:block;font-family:var(--mono);font-size:16px;line-height:1.7;letter-spacing:.08em;
   color:var(--paper);word-break:break-all;margin-bottom:12px}
 
 /* ---- diagnostics ---- */
-.diag{border:1px solid var(--line);background:var(--ink-2)}
-.diagRow{display:flex;gap:12px;padding:9px 13px;border-bottom:1px solid var(--line);
-  font-family:var(--mono);font-size:12px}
+.diag{background:var(--ink-2);border:1px solid var(--hair);border-radius:var(--r-lg);overflow:hidden}
+.diagRow{display:flex;gap:12px;padding:10px 14px;border-bottom:1px solid var(--hair);font-size:13px}
 .diagRow:last-child{border-bottom:0}
-.diagKey{color:var(--muted);letter-spacing:.12em;text-transform:uppercase;flex:none;width:44%}
-.diagVal{color:var(--text);word-break:break-all;flex:1}
+.diagKey{color:var(--muted);flex:none;width:44%}
+.diagVal{color:var(--text);word-break:break-all;flex:1;font-family:var(--mono);font-size:12.5px}
 
+/* ---- contacts, settings ---- */
+.keyGrid{font-family:var(--mono);font-size:15px;letter-spacing:.1em;color:var(--paper);
+  background:var(--ink);border-radius:var(--r-sm);padding:10px 14px;margin:6px 0 10px}
+.setGroup{background:var(--ink-2);border:1px solid var(--hair);border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
+.setGroup p{margin-bottom:8px}
+.setGroup p:last-child{margin-bottom:0}
+.setGroup .btn{margin:12px 0 0}
 </style>
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
@@ -263,12 +331,10 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
 <div id="app">
 
   <header class="rail">
-    <button id="backBtn" class="iconBtn hide" aria-label="Back">&larr;</button>
-    <span class="dot" id="dot"></span>
-    <span id="state">starting</span>
+    <button id="backBtn" class="iconBtn hide" aria-label="Back"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span class="brand">Cyanotype</span>
     <span class="spacer"></span>
-    <span class="mono" id="selfId">········</span>
-    <span class="mono" id="cache">·</span>
+    <span class="statusPill"><span class="dot" id="dot"></span><span id="state" data-state="starting">Starting&hellip;</span></span>
   </header>
 
   <!-- ============ HOME ============ -->
@@ -282,18 +348,21 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
       <div id="convList" class="list"></div>
     </div>
     <div id="paneContacts" class="pane hide">
+      <div class="paneHead"><button class="linkBtn" id="addContactBtn">+ Add a contact</button></div>
       <div id="contactList" class="list"></div>
     </div>
 
     <div class="actions">
-      <button class="btn" id="btnInvite">Start a chat
+      <button class="btn primary" id="btnInvite">Start a chat
         <span class="sub">Show a code for them to scan</span></button>
       <button class="btn alt" id="btnJoin">Join a chat
         <span class="sub">Scan someone's code</span></button>
-      <button class="btn ghost" id="btnGroup">New group</button>
-      <button class="btn ghost" id="diagBtn">Diagnostics</button>
+      <div class="actRow">
+        <button class="btn ghost" id="btnGroup">New group</button>
+        <button class="btn ghost" id="settingsBtn">Settings</button>
+      </div>
     </div>
-    <p class="note">On a hotspot, pair with the phone that's <em>sharing</em> it. Some hotspots stop their guests talking to each other, but never to the host.</p>
+    <p class="note" id="homeNote">On a hotspot, pair with the phone that's <em>sharing</em> it. Some hotspots stop their guests talking to each other, but never to the host.</p>
   </section>
 
   <!-- ============ PAIR (show code) ============ -->
@@ -305,8 +374,9 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
       <canvas id="qrOut"></canvas>
       <span class="stamp" id="qrStamp"></span>
     </div>
-    <button class="btn" id="pairAction">Scan their reply</button>
+    <button class="btn primary" id="pairAction">Scan their reply</button>
     <button class="btn ghost" id="cancelPair">Cancel</button>
+    <p class="note">On a hotspot, pair with the phone that's <em>sharing</em> it. Some hotspots stop their guests talking to each other, but never to the host.</p>
   </section>
 
   <!-- ============ SCANNER ============ -->
@@ -331,27 +401,30 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
       <span class="eyebrow">Save them as</span>
       <input id="nameInput" placeholder="Name" autocomplete="off">
     </label>
-    <button class="btn" id="safetyConfirm">It matches — save contact</button>
+    <button class="btn primary" id="safetyConfirm">It matches — save contact</button>
   </section>
 
   <!-- ============ CHAT ============ -->
   <section class="screen" id="s-chat">
     <div class="chatHead">
-      <div>
-        <h2 id="chatTitle"></h2>
+      <button class="chatTitleBtn" id="chatTitleBtn" aria-label="Chat details">
+        <span class="chatName" id="chatTitle"></span>
         <span class="chatSub" id="chatSub"></span>
-      </div>
-      <button class="iconBtn hide" id="callBtn" aria-label="Start a voice call">✆</button>
-      <button class="iconBtn hide" id="rejoinBtn" aria-label="Reconnect without re-pairing">↺</button>
-      <button class="iconBtn hide" id="groupAdd" aria-label="Add someone">+</button>
+      </button>
+      <button class="iconBtn hide" id="callBtn" aria-label="Start a voice call"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3.5l1.8 4.6-2.2 1.4a11 11 0 0 0 5.9 5.9l1.4-2.2L20 15.5V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></button>
+      <button class="iconBtn hide" id="rejoinBtn" aria-label="Reconnect without re-pairing"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.4 5.7"/><path d="M20 4v7h-7"/></svg></button>
+      <button class="iconBtn hide" id="groupAdd" aria-label="Add someone to the group"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></svg></button>
+      <button class="iconBtn" id="chatMenuBtn" aria-label="Chat options"><svg class="i fill" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
     </div>
     <div class="log" id="log"></div>
+    <button class="jump hide" id="jumpBtn">New messages &darr;</button>
     <div class="composer">
-      <button class="iconBtn" id="attachBtn" aria-label="Attach a photo">▣</button>
-      <button class="iconBtn" id="micBtn" aria-label="Record a voice note">●</button>
-      <button class="iconBtn" id="locBtn" aria-label="Share your location for 10 minutes">◉</button>
-      <input id="msgInput" placeholder="Message" autocomplete="off" enterkeyhint="send">
-      <button id="sendBtn">Send</button>
+      <button class="iconBtn" id="plusBtn" aria-label="Send a photo, file or your location"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="hide" id="attachBtn" aria-label="Attach a photo or file"></button>
+      <button class="hide" id="locBtn" aria-label="Share your location for 10 minutes"></button>
+      <textarea id="msgInput" rows="1" placeholder="Message" autocomplete="off" enterkeyhint="send" autocapitalize="sentences"></textarea>
+      <button class="iconBtn" id="micBtn" aria-label="Record a voice note"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <button class="iconBtn hide" id="sendBtn" aria-label="Send"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
     </div>
     <input type="file" id="fileInput" class="hide">
   </section>
@@ -370,7 +443,7 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
       <span class="eyebrow" id="rjInLbl">Their code</span>
       <input id="rjIn" placeholder="Letters and numbers" autocomplete="off" autocapitalize="characters" spellcheck="false">
     </label>
-    <button class="btn hide" id="rjGo">Connect</button>
+    <button class="btn primary hide" id="rjGo">Connect</button>
     <button class="btn ghost" id="rjCancel">Cancel</button>
     <p class="note">No camera needed. Your identities were pinned when you first paired, so there is no safety number to check again.</p>
   </section>
@@ -383,6 +456,30 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
     <div class="diag" id="diagBody"></div>
   </section>
 
+  <!-- ============ SETTINGS ============ -->
+  <section class="screen" id="s-settings">
+    <p class="eyebrow">Settings</p>
+    <h2>This phone</h2>
+    <p>Everything here applies to this phone only. Other phones keep their own copies and settings.</p>
+    <div class="setGroup">
+      <p class="eyebrow">Notifications</p>
+      <p id="notifState"></p>
+      <button class="btn primary" id="notifBtn">Turn on notifications</button>
+    </div>
+    <div class="setGroup">
+      <p class="eyebrow">Keep messages for</p>
+      <p>Older messages, photos and files are deleted automatically. Messages still waiting to be sent are never deleted.</p>
+      <div class="seg" id="keepSeg"></div>
+      <p class="dim" id="storeStats" style="margin-top:10px"></p>
+      <button class="btn ghost" id="pruneNow">Delete older messages now&hellip;</button>
+    </div>
+    <div class="setGroup">
+      <p class="eyebrow">About this phone</p>
+      <p class="dim">ID <span class="mono" id="selfId">&middot;&middot;&middot;&middot;</span> &middot; <span id="cache">checking offline use&hellip;</span></p>
+      <button class="btn ghost" id="diagBtn">Diagnostics</button>
+    </div>
+  </section>
+
   <!-- ============ CALL BAR ============ -->
   <div class="callbar" id="callBar">
     <span class="dot" id="callDot"></span>
@@ -390,8 +487,8 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
       <span class="n" id="callName"></span>
       <span class="s" id="callState">calling</span>
     </span>
-    <button class="iconBtn" id="muteBtn" aria-label="Mute your microphone">●</button>
-    <button class="hangup" id="hangupBtn" aria-label="End call">✕</button>
+    <button class="iconBtn" id="muteBtn" aria-label="Mute your microphone"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <button class="hangup" id="hangupBtn" aria-label="End call"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
 
   <!-- ============ INCOMING CALL ============ -->
@@ -404,6 +501,17 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
         <button class="decline" id="declineBtn">Decline</button>
         <button class="accept" id="acceptBtn">Answer</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ MENU / CONFIRM ============ -->
+  <div class="sheet" id="menuSheet">
+    <div class="card">
+      <p class="eyebrow" id="menuEyebrow"></p>
+      <h2 id="menuTitle"></h2>
+      <p id="menuText"></p>
+      <div id="menuBody"></div>
+      <div class="menuActs" id="menuActs"></div>
     </div>
   </div>
 
@@ -423,7 +531,7 @@ footer{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transfor
   <audio id="remoteAudio" autoplay playsinline class="hide"></audio>
 
   <div class="toast" id="toast"></div>
-  <footer>direct link · dtls + aes-256-gcm · signed identities</footer>
+  <footer>Direct between phones &middot; end-to-end encrypted &middot; no servers</footer>
 </div>
 
 <script>
@@ -537,6 +645,17 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 </script>
 <script>
 (() => {
+  // native.js
+  /* Capacitor exists only inside the Android wrapper. In a browser NATIVE is
+     null and every caller falls back to the web APIs. */
+  var NATIVE = typeof window !== "undefined" && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Foreground || null;
+  /* Once the wrapper's keep-visible workaround has run, the WebView reports
+     itself visible even with the phone locked, so the page's own visibility
+     flag stops telling the truth. Inside the wrapper Android reports the real
+     state instead. */
+  var nativeAway = NATIVE ? false : null;
+  var appAway = () => nativeAway !== null ? nativeAway : document.hidden;
+
   // crypto.js
   typeof window !== "undefined" && window.__boot && window.__boot.mark("crypto");
   var te = new TextEncoder();
@@ -748,6 +867,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       del: (store, key) => run([store], "readwrite", (s) => {
         s.delete(key);
       }),
+      delMany: (store, keys) => keys.length ? run([store], "readwrite", (s) => {
+        keys.forEach((k) => s.delete(k));
+      }) : Promise.resolve(),
       byConv: (convId) => run(["messages"], "readonly", (s) => wrap(s.index("convAt").getAll(IDBKeyRange.bound([convId, 0], [convId, Infinity])))),
       purge: (convId, ids, blobIds) => run(["conversations", "messages", "blobs"], "readwrite", (c, m, b) => {
         c.delete(convId);
@@ -777,6 +899,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       },
       del: async (store, key) => {
         m[store].delete(key);
+      },
+      delMany: async (store, keys) => {
+        keys.forEach((k) => m[store].delete(k));
       },
       byConv: async (convId) => [...m.messages.values()].filter((x) => x.convId === convId).sort((a, b) => a.at - b.at),
       purge: async (convId, ids, blobIds) => {
@@ -933,6 +1058,56 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   var outbox = () => backend.getAll("outbox");
   var putEnvelope = (e) => backend.put("outbox", e);
   var dropEnvelope = (id) => backend.del("outbox", id);
+  /* ---- deleting ---- */
+  /* Everything here is local. Nothing is sent: the other phone keeps its copy. */
+  async function refreshPreview(convId) {
+    const c = await conversation(convId);
+    if (!c) return;
+    const rows = await backend.byConv(convId);
+    const last = rows[rows.length - 1];
+    if (!last) {
+      c.preview = "";
+      c.unread = 0;
+    }
+    else if (last.kind === "text") c.preview = last.body ? await decryptText(deviceKey, last.body).catch(() => "") : "";
+    else c.preview = PREVIEW[last.kind] || last.kind;
+    await saveConversation(c);
+  }
+  async function deleteMessages(ids, preloaded) {
+    const recs = preloaded || (await Promise.all(ids.map((id) => backend.get("messages", id)))).filter(Boolean);
+    if (!recs.length) return 0;
+    await backend.delMany("blobs", recs.filter((r) => r.blobId).map((r) => r.blobId));
+    await backend.delMany("messages", recs.map((r) => r.id));
+    // A message still waiting in the outbox would otherwise go out anyway.
+    await backend.delMany("outbox", recs.filter((r) => r.envId && r.state === "queued").map((r) => r.envId));
+    for (const convId of new Set(recs.map((r) => r.convId))) await refreshPreview(convId);
+    return recs.length;
+  }
+  async function clearConversation(convId) {
+    const rows = await backend.byConv(convId);
+    return deleteMessages(null, rows);
+  }
+  async function deleteConversation(convId) {
+    const rows = await backend.byConv(convId);
+    await backend.delMany("outbox", rows.filter((r) => r.envId && r.state === "queued").map((r) => r.envId));
+    await backend.purge(convId, rows.map((r) => r.id), rows.filter((r) => r.blobId).map((r) => r.blobId));
+  }
+  var removeContact = (id) => backend.del("contacts", id);
+  /* Queued messages are kept: deleting one nobody has received yet is a
+     different decision from tidying up history. */
+  async function pruneBefore(cutoff) {
+    const old = (await backend.getAll("messages")).filter((r) => (r.at || 0) < cutoff && r.state !== "queued");
+    return deleteMessages(null, old);
+  }
+  async function countBefore(cutoff) {
+    return (await backend.getAll("messages")).filter((r) => (r.at || 0) < cutoff && r.state !== "queued").length;
+  }
+  async function storeStats() {
+    const all = await backend.getAll("messages");
+    return { count: all.length, bytes: all.reduce((n, r) => n + (r.size || 0), 0) };
+  }
+  var getSetting = (k) => backend.get("meta", "set:" + k).catch(() => void 0);
+  var putSetting = (k, v) => backend.put("meta", v, "set:" + k);
   /* Ids of envelopes already delivered here, so a second carrier bringing the
      same message does not duplicate it. Capped so it cannot grow forever. */
   async function markSeen(id) {
@@ -1086,7 +1261,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           break;
         case "ping":
           this.lastBeat = Date.now();
-          this.sendCtrl({ t: "pong", state: document.hidden ? "away" : "online" }).catch(() => {
+          this.sendCtrl({ t: "pong", state: appAway() ? "away" : "online" }).catch(() => {
           });
           break;
         case "pong":
@@ -1189,7 +1364,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       } else if (st === "connected") {
         clearTimeout(link2.graceTimer);
         link2.recovering = false;
-        link2.setPresence(document.hidden ? "away" : "online");
+        link2.setPresence(appAway() ? "away" : "online");
       }
       emit("pcstate", { peerId, state: st });
     };
@@ -1214,7 +1389,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
   }, HEARTBEAT);
   document.addEventListener("visibilitychange", () => {
-    const state = document.hidden ? "away" : "online";
+    const state = appAway() ? "away" : "online";
     for (const l of links.values()) if (l.open) l.sendCtrl({ t: "presence", state }).catch(() => {
     });
   });
@@ -2336,11 +2511,28 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   var pending = null;
   var recorder = null;
   var groupKeys = /* @__PURE__ */ new Map();
-  var PRESENCE_LABEL = { online: "online", away: "away", offline: "not connected", connecting: "connecting" };
+  var PRESENCE_LABEL = { online: "Online", away: "Away", offline: "Not connected", connecting: "Connecting\u2026" };
+  /* What the status pill says. The raw state stays on data-state for code and tests. */
+  var STATUS_LABEL = {
+    starting: "Starting\u2026",
+    idle: "Ready",
+    linked: "Connected",
+    connecting: "Connecting\u2026",
+    "gathering routes": "Getting ready\u2026",
+    "opening camera": "Opening camera\u2026",
+    scanning: "Scanning\u2026",
+    "waiting for them": "Waiting for them\u2026",
+    error: "Something went wrong",
+    "needs https": "Needs HTTPS",
+    unsupported: "Not supported here"
+  };
   var MAX_FILE = 32 * 1024 * 1024;
   function show(name) {
     document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === "s-" + name));
     $("backBtn").classList.toggle("hide", name === "home");
+    /* In a chat the page is pinned to the screen so only the messages
+       scroll and the composer stays in reach. */
+    document.body.classList.toggle("inChat", name === "chat");
   }
   function toast(text, bad, onTap) {
     const t = $("toast");
@@ -2355,49 +2547,95 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if (!onTap) toast.timer = setTimeout(() => t.className = "toast", 5200);
   }
   function status(text, kind) {
-    $("state").textContent = text;
+    $("state").dataset.state = text;
+    $("state").textContent = STATUS_LABEL[text] || text;
     $("dot").className = "dot" + (kind ? " " + kind : "");
+  }
+  /* ---- small drawing helpers ---- */
+  var ICON_CHAT = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/></svg>';
+  function iconEl(svgText) {
+    const t = document.createElement("template");
+    t.innerHTML = svgText;
+    return t.content.firstChild;
+  }
+  var groupSize = (c) => {
+    const n = (c.members || []).length;
+    return n ? `${n + 1} people` : "Just you so far \u2014 add people from the chat";
+  };
+  var hueOf = (s) => {
+    let h = 7;
+    for (const ch of String(s)) h = (h * 31 + ch.codePointAt(0)) % 360;
+    return h;
+  };
+  function initials(name) {
+    const words = String(name || "?").trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return "?";
+    const pick = (w) => Array.from(w)[0] || "";
+    return (words.length > 1 ? pick(words[0]) + pick(words[words.length - 1]) : pick(words[0])).toUpperCase();
+  }
+  /* Colour comes from the id, not the name, so renaming keeps the colour. */
+  function avatarFor(name, isGroup, pres, key) {
+    const a = el("span", "avatar" + (isGroup ? " group" : ""), initials(name));
+    a.style.setProperty("--h", hueOf(key || name));
+    if (!isGroup || pres === "online") a.append(el("span", "pip " + (pres === "online" ? "on" : pres === "away" ? "away" : "")));
+    return a;
   }
   async function renderHome() {
     const [convs, contacts2] = await Promise.all([conversations(), contacts()]);
     const list = $("convList");
     list.innerHTML = "";
+    $("homeNote").classList.toggle("hide", convs.length > 0);
+    const totalUnread = convs.reduce((n, c) => n + (c.unread || 0), 0);
+    $("tabChats").textContent = "Chats";
+    if (totalUnread) $("tabChats").append(el("span", "badge", totalUnread > 99 ? "99+" : String(totalUnread)));
     if (!convs.length) {
       const empty = el("div", "empty");
       empty.append(
-        el("p", null, "No chats yet."),
+        iconEl(ICON_CHAT),
+        el("p", null, "No chats yet"),
         el("p", "dim", "Pair with someone nearby to start one. You only scan a code the first time \u2014 after that they stay in your contacts.")
       );
       list.append(empty);
     }
     for (const c of convs) {
-      const row = el("button", "row");
-      const live = c.type === "group" ? (c.members || []).some((id) => presenceOf(id) === "online") : presenceOf(c.peerId) === "online";
-      const avatar = el("span", "avatar" + (c.type === "group" ? " group" : ""), c.title.slice(0, 2).toUpperCase());
+      const row = el("button", "row" + (c.unread ? " unread" : ""));
+      onHold(row, () => chatMenu(c));
+      const pres = c.type === "group" ? (c.members || []).some((id) => presenceOf(id) === "online") ? "online" : "offline" : presenceOf(c.peerId);
       const main = el("span", "rowMain");
       const top = el("span", "rowTop");
       top.append(el("span", "rowName", c.title), el("span", "rowTime", c.lastAt ? shortTime(c.lastAt) : ""));
-      main.append(top, el("span", "rowSub", c.preview || (c.type === "group" ? `${(c.members || []).length + 1} people` : "No messages yet")));
-      row.append(avatar, main, el("span", "pip " + (live ? "on" : "")));
+      const bottom = el("span", "rowBottom");
+      bottom.append(el("span", "rowSub", c.preview || (c.type === "group" ? `${groupSize(c)}` : "No messages yet")));
+      if (c.unread) bottom.append(el("span", "badge", c.unread > 99 ? "99+" : String(c.unread)));
+      main.append(top, bottom);
+      row.append(avatarFor(c.title, c.type === "group", pres, c.peerId || c.id), main);
       row.onclick = () => openChat(c.id);
       list.append(row);
     }
     const cl = $("contactList");
     cl.innerHTML = "";
-    if (!contacts2.length) cl.append(el("p", "dim", "Contacts you pair with are saved here. Their key is pinned, so you only verify a safety number once."));
+    if (!contacts2.length) {
+      const empty = el("div", "empty");
+      empty.append(
+        el("p", null, "No contacts yet"),
+        el("p", "dim", "People you pair with are saved here. You check a safety number with each of them once, and after that they stay trusted.")
+      );
+      cl.append(empty);
+    }
+    contacts2.sort((a, b) => a.name.localeCompare(b.name));
     for (const c of contacts2) {
-      const row = el("div", "row static");
+      const row = el("button", "row");
+      row.onclick = () => contactSheet(c);
       const pres = presenceOf(c.id);
       row.append(
-        el("span", "avatar", c.name.slice(0, 2).toUpperCase()),
+        avatarFor(c.name, false, pres, c.id),
         (() => {
           const m = el("span", "rowMain");
           const top = el("span", "rowTop");
-          top.append(el("span", "rowName", c.name), el("span", "rowTime mono", c.id.slice(0, 8)));
-          m.append(top, el("span", "rowSub", PRESENCE_LABEL[pres] + (c.verified ? " \xB7 verified" : " \xB7 unverified")));
+          top.append(el("span", "rowName", c.name));
+          m.append(top, el("span", "rowSub", PRESENCE_LABEL[pres] + (c.verified ? " \xB7 safety number checked" : " \xB7 safety number not checked")));
           return m;
-        })(),
-        el("span", "pip " + (pres === "online" ? "on" : pres === "away" ? "away" : ""))
+        })()
       );
       cl.append(row);
     }
@@ -2554,6 +2792,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     sn.forEach((q) => grid.append(el("div", null, q)));
     $("nameInput").value = contact2.name === "New contact" ? "" : contact2.name;
     $("safetyConfirm").onclick = async () => {
+      askNotify().catch(() => {
+      });
       contact2.name = $("nameInput").value.trim() || "Unnamed";
       contact2.verified = true;
       await saveContact(contact2);
@@ -2571,12 +2811,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   async function openChat(convId) {
     activeConv = await conversation(convId);
     if (!activeConv) return;
+    clearAlerts(convId);
     $("chatTitle").textContent = activeConv.title;
     updateChatPresence();
     const log = $("log");
     log.innerHTML = "";
+    delete log.dataset.day;
+    log.dataset.loading = "1";
     for (const m of await messages(convId)) await renderMessage(m, log);
+    delete log.dataset.loading;
     log.scrollTop = log.scrollHeight;
+    $("jumpBtn").classList.add("hide");
+    syncComposer();
     $("groupAdd").classList.toggle("hide", activeConv.type !== "group" || activeConv.hostId !== me.selfId);
     $("callBtn").classList.toggle("hide", activeConv.type !== "direct");
     $("rejoinBtn").classList.toggle("hide",
@@ -2584,12 +2830,59 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     show("chat");
     markRead(activeConv).catch(() => {
     });
+    resetUnread(convId).catch(() => {
+    });
+    holdTip().catch(() => {
+    });
+  }
+  async function resetUnread(convId) {
+    const c = await conversation(convId);
+    if (!c || !c.unread) return;
+    c.unread = 0;
+    await saveConversation(c);
+    renderHome();
+  }
+  /* Press-and-hold has no visible sign, so say so once. */
+  async function holdTip() {
+    if (!$("log").querySelector(".msg") || await getSetting("tipHold")) return;
+    await putSetting("tipHold", true);
+    setTimeout(() => toast("Tip: press and hold a message to copy, save or delete it"), 700);
+  }
+  var clockTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  function dayLabel(ts) {
+    const d = new Date(ts), today = /* @__PURE__ */ new Date(), yest = /* @__PURE__ */ new Date();
+    yest.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yest.toDateString()) return "Yesterday";
+    const opts = { weekday: "short", day: "numeric", month: "short" };
+    if (d.getFullYear() !== today.getFullYear()) opts.year = "numeric";
+    return d.toLocaleDateString([], opts);
+  }
+  /* The composer grows with the text, and the round button is the mic until
+     there is something to send. */
+  function syncComposer() {
+    const ta = $("msgInput");
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight + 2, 132) + "px";
+    const has = ta.value.trim().length > 0;
+    $("sendBtn").classList.toggle("hide", !has);
+    $("micBtn").classList.toggle("hide", has && !$("micBtn").classList.contains("rec"));
+  }
+  function attachMenu() {
+    sheet({
+      eyebrow: "Send",
+      title: "Add to the chat",
+      actions: [
+        { label: "Photo or file", sub: `Up to ${fmtSize(MAX_FILE)}`, run: () => $("fileInput").click() },
+        { label: "Share my location", kind: "alt", sub: "Live for 10 minutes, then stops by itself", run: () => $("locBtn").click() }
+      ]
+    });
   }
   function updateChatPresence() {
     if (!activeConv) return;
     if (activeConv.type === "group") {
       const on2 = (activeConv.members || []).filter((id) => presenceOf(id) === "online").length;
-      $("chatSub").textContent = `${(activeConv.members || []).length + 1} people \xB7 ${on2} connected`;
+      $("chatSub").textContent = (activeConv.members || []).length ? `${activeConv.members.length + 1} people \xB7 ${on2} connected` : "Just you so far";
       return;
     }
     const p = presenceOf(activeConv.peerId);
@@ -2623,7 +2916,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     if (m.state === "queued") wrap.classList.add("queued");
     wrap.dataset.id = m.id;
-    const stamp = el("span", "t", shortTime(m.at));
+    const stamp = el("span", "t", clockTime(m.at));
     if (m.state === "relayed") stamp.append(el("span", "tag", "via relay"));
     /* One tick left this phone, two reached theirs, two blue were opened.
        Only for your own messages in a one-to-one thread. */
@@ -2635,8 +2928,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       stamp.append(tick);
     }
     wrap.append(stamp);
+    onHold(wrap, () => messageMenu(wrap, m));
+    const day = new Date(m.at).toDateString();
+    if (log.dataset.day !== day) {
+      log.dataset.day = day;
+      log.append(el("div", "daySep", dayLabel(m.at)));
+    }
+    /* Follow the conversation only if the reader is already at the bottom:
+       someone scrolled up to reread something should not be yanked down. */
+    const following = log.dataset.loading || mine || log.scrollHeight - log.scrollTop - log.clientHeight < 120;
     log.append(wrap);
-    log.scrollTop = log.scrollHeight;
+    if (following) log.scrollTop = log.scrollHeight;
+    else if (log.id === "log") $("jumpBtn").classList.remove("hide");
     return wrap;
   }
   var fmtSize = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " bytes";
@@ -2653,12 +2956,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     box.append(el("span", "meta", fmtSize(m.size || 0) + (m.hash ? " \xB7 sha256 " + m.hash : "")));
     if (m.hashOk === false) box.append(el("span", "meta", "\u26A0 this does not match the hash the sender announced"));
     const acts = el("div", "acts");
-    const a = el("a", null, "Save");
-    a.download = m.name || "file";
-    a.href = "#";
-    blobUrl(m.blobId, m.mime).then((u) => {
-      if (u) a.href = u;
-    });
+    const a = el("button", null, "Save");
+    a.onclick = () => saveAttachment(m).catch((e) => toast(e.message || String(e), true));
     acts.append(a);
     box.append(acts);
     return box;
@@ -2725,6 +3024,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const text = input.value.trim();
     if (!text || !activeConv) return;
     input.value = "";
+    syncComposer();
     try {
       if (activeConv.type === "group") {
         await sendGroupText(activeConv, me.selfId, text, groupKeys.get(activeConv.id));
@@ -2803,9 +3103,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     renderHome();
   }
-  async function createGroup() {
-    const title = prompt("Group name");
-    if (!title) return;
+  function createGroup() {
+    askText({
+      eyebrow: "New group",
+      title: "Name the group",
+      text: "You host it. Add people from inside the chat with the add-person button, pairing with each of them in person.",
+      placeholder: "Group name",
+      action: "Create group",
+      run: (title) => makeGroup(title)
+    });
+  }
+  async function makeGroup(title) {
+    if (!title) throw new Error("Give the group a name.");
     const key = newGroupKey();
     const conv = await saveConversation({
       id: crypto.randomUUID(),
@@ -2820,7 +3129,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     groupKeys.set(conv.id, await importGroupKey(key));
     renderHome();
     openChat(conv.id);
-    toast("Group created \u2014 add people with the + button");
+    toast("Group created \u2014 add people with the add-person button at the top");
   }
   async function addToGroup(convId, contact2) {
     const conv = await conversation(convId);
@@ -2877,9 +3186,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     const open = (activeConv == null ? void 0 : activeConv.id) === conv.id;
     if (open) await renderMessage(m);
     else toast(`${conv.title}: ${text.slice(0, 60)}`);
+    noteIncoming(conv, m.senderName ? `${m.senderName}: ${text}` : text);
     if (id) {
       await sendReceipt(conv, [id], "delivered");
-      if (open && !document.hidden) await markRead(conv);
+      if (open && !appAway()) await markRead(conv);
     }
     renderHome();
   });
@@ -2897,6 +3207,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     }
     if ((activeConv == null ? void 0 : activeConv.id) === thread.id) await renderMessage(m);
     else toast(kind === "file" ? `File received: ${name || "unnamed"}` : "Attachment received");
+    noteIncoming(thread, kind === "file" ? `File: ${name || "unnamed"}` : kind === "image" ? "Photo" : "Voice note");
     const conv = thread;
     if ((conv == null ? void 0 : conv.type) === "group" && conv.hostId === me.selfId) {
       for (const id of (conv.members || []).filter((x) => x !== peerId)) {
@@ -2959,6 +3270,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       m.senderName = senderName;
       if ((activeConv == null ? void 0 : activeConv.id) === convId) await renderMessage(m);
       else toast(`${conv.title} \xB7 ${senderName}: ${body.text.slice(0, 50)}`);
+      noteIncoming(conv, `${senderName}: ${body.text}`);
       if (conv.hostId === me.selfId) {
         await relayToRoom(convId, conv.members, peerId, { t: "group-msg", packed });
       }
@@ -3083,12 +3395,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     $("ringName").textContent = call.name;
     $("ringSheet").classList.add("on");
     keepAwake(true);
-    notify("Incoming voice call", call.name + " is calling", "call");
+    notify("Incoming voice call", call.name + " is calling", "call", { kind: "call", convId: call.convId });
     if (navigator.vibrate) navigator.vibrate([300, 200, 300]);
   });
   on("callended", async (ev) => {
     const { reason, secs, convId, dir, connected } = ev.detail;
     $("ringSheet").classList.remove("on");
+    dropAlert("call");
     const a = $("remoteAudio");
     a.srcObject = null;
     paintCall();
@@ -3098,6 +3411,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const label = connected ? (dir === "out" ? "Outgoing call" : "Incoming call") : dir === "out" ? "No answer" : "Missed call";
       const m = await addMessage({ convId, from: dir === "out" ? me.selfId : null, kind: "call", text: JSON.stringify({ label, secs }) });
       if ((activeConv == null ? void 0 : activeConv.id) === convId) await renderMessage(m);
+      if (label === "Missed call") noteIncoming(await conversation(convId), "Missed call");
       renderHome();
     }
   });
@@ -3134,7 +3448,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     m.senderName = d.senderName;
     if ((activeConv == null ? void 0 : activeConv.id) === convId) await renderMessage(m);
     else toast(`${who} is sharing their location for 10 minutes`);
-    notify("Location shared", `${who} is sharing their location for 10 minutes`, "loc-" + d.shareId);
+    if (appAway()) notify("Location shared", `${who} is sharing their location for 10 minutes`, "loc-" + d.shareId, { convId });
     renderHome();
   }
   function paintLoc() {
@@ -3213,7 +3527,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       const m = await addMessage({ convId: conv.id, from: env.from, kind: "text", text: body.text, at: env.at, state: "relayed" });
       if ((activeConv == null ? void 0 : activeConv.id) === conv.id) await renderMessage(m);
       else toast(`${conv.title} (relayed): ${String(body.text).slice(0, 50)}`);
-      notify(conv.title, body.text, "carry");
+      noteIncoming(conv, body.text);
       renderHome();
     }
   });
@@ -3268,22 +3582,32 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   /* Called when a thread is on screen and the app is actually in front. A
      backgrounded tab must not claim the message was read. */
   async function markRead(conv) {
-    if (!conv || conv.type !== "direct" || document.hidden) return;
+    if (!conv || conv.type !== "direct" || appAway()) return;
     const rows = await messages(conv.id, 400);
     const pending = rows.filter((r) => r.from !== me.selfId && r.rid && r.rstate !== "read");
     if (!pending.length) return;
     await sendReceipt(conv, pending.map((r) => r.rid), "read");
     for (const r of pending) await patchMessage(r.id, { rstate: "read" });
   }
-  async function notify(title, body, tag) {
+  /* ---- notifications ---- */
+  /* Inside the wrapper the WebView has no Notification API at all, so alerts
+     go through the plugin. In a browser they go through the service worker,
+     which is also what lets a tap open the right chat. */
+  async function notify(title, body, tag, opts = {}) {
     try {
+      if (NATIVE) {
+        const r = await NATIVE.showAlert({ title, body: String(body || ""), tag, convId: opts.convId, kind: opts.kind });
+        return !!(r && r.shown);
+      }
       if (!("Notification" in window) || Notification.permission !== "granted") return false;
-      const reg = navigator.serviceWorker && await navigator.serviceWorker.ready.catch(() => null);
+      // getRegistration, not .ready: .ready never settles if registration failed.
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration().catch(() => null);
+      const options = { body: String(body || ""), tag, renotify: true, icon: "./icon-192.png", badge: "./icon-192.png", data: { convId: opts.convId } };
       if (reg && reg.showNotification) {
-        await reg.showNotification(title, { body, tag, icon: "./icon-192.png", badge: "./icon-192.png" });
+        await reg.showNotification(title, options);
         return true;
       }
-      new Notification(title, { body, tag, icon: "./icon-192.png" });
+      new Notification(title, options);
       return true;
     } catch (e) {
       return false;
@@ -3291,6 +3615,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   async function askNotify() {
     try {
+      if (NATIVE) {
+        const r = await NATIVE.requestAlerts();
+        return !!(r && r.granted);
+      }
       if (!("Notification" in window)) return false;
       if (Notification.permission === "granted") return true;
       if (Notification.permission === "denied") return false;
@@ -3299,10 +3627,97 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       return false;
     }
   }
+  /* One notification per chat, replaced as more arrive, so a busy group does
+     not bury the shade. Only while the app is out of sight: in front, the
+     in-app toast already says it. */
+  var unseen = /* @__PURE__ */ new Map();
+  var alertTag = (convId) => "conv-" + convId;
+  async function noteIncoming(conv, preview) {
+    if (!conv) return;
+    const viewing = activeConv && activeConv.id === conv.id && $("s-chat").classList.contains("on") && !appAway();
+    if (!viewing) {
+      const c = await conversation(conv.id);
+      if (c) {
+        c.unread = (c.unread || 0) + 1;
+        await saveConversation(c);
+        renderHome();
+      }
+    }
+    alertMessage(conv, preview);
+  }
+  function alertMessage(conv, preview) {
+    if (!conv || !appAway()) return;
+    const tag = alertTag(conv.id);
+    const count = (unseen.get(tag) || 0) + 1;
+    unseen.set(tag, count);
+    notify(count > 1 ? `${conv.title} (${count} new)` : conv.title, preview, tag, { convId: conv.id });
+  }
+  function dropAlert(tag) {
+    unseen.delete(tag);
+    if (NATIVE) return void NATIVE.clearAlert({ tag }).catch(() => {
+    });
+    if (!navigator.serviceWorker) return;
+    navigator.serviceWorker.getRegistration().then((reg) => reg && reg.getNotifications ? reg.getNotifications({ tag }) : []).then((ns) => ns.forEach((n) => n.close())).catch(() => {
+    });
+  }
+  var clearAlerts = (convId) => dropAlert(alertTag(convId));
+  /* ---- holding the process open (Android wrapper only) ---- */
+  /* The "connected" notification should mean exactly that. Hold the service
+     while any link is live or recovering, or a call or location share is
+     running. Let it go 90 seconds after the last one ends, so a brief drop
+     does not make the notification flicker. */
+  var svcOn = false;
+  var svcText = "";
+  var svcTimer = null;
+  function wantService() {
+    for (const l of links.values()) if (l.open || l.presence === "away") return true;
+    return !!call || !!locShare;
+  }
+  function syncService() {
+    if (!NATIVE) return;
+    if (wantService()) {
+      clearTimeout(svcTimer);
+      svcTimer = null;
+      const n = openLinks().length;
+      const text = n ? `Linked to ${n} ${n === 1 ? "person" : "people"}` : "Reconnecting\u2026";
+      if (svcOn && text === svcText) return;
+      // Android refuses this from the background; the next resume retries.
+      NATIVE.start({ text }).then(() => {
+        svcOn = true;
+        svcText = text;
+      }).catch(() => {
+      });
+    } else if (svcOn && !svcTimer) {
+      svcTimer = setTimeout(() => {
+        svcTimer = null;
+        if (wantService()) return;
+        svcOn = false;
+        svcText = "";
+        NATIVE.stop().catch(() => {
+        });
+      }, 9e4);
+    }
+  }
+  function wireNative() {
+    if (!NATIVE) return;
+    NATIVE.addListener("appstate", (d) => {
+      nativeAway = !(d && d.active);
+      // Let every visibility listener re-check against the real state.
+      document.dispatchEvent(new Event("visibilitychange"));
+      if (!nativeAway) syncService();
+    });
+    NATIVE.addListener("open", (d) => {
+      if (d && d.convId) openChat(d.convId);
+    });
+    NATIVE.launchTarget().then((r) => {
+      if (r && r.convId) openChat(r.convId);
+    }).catch(() => {
+    });
+  }
   var wakeLock = null;
   /* Waking the phone is the moment a dropped link is most worth retrying. */
   async function rejoinSweep() {
-    if (document.hidden) return;
+    if (appAway()) return;
     for (const c of await conversations()) {
       if (c.type !== "direct" || !c.peerId) continue;
       if ((link(c.peerId) || {}).open) continue;
@@ -3336,6 +3751,427 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     show("home");
     renderHome();
   }
+  /* ---- one reusable sheet for menus, confirmations and small forms ---- */
+  function closeSheet() {
+    $("menuSheet").classList.remove("on");
+    $("menuBody").innerHTML = "";
+    $("menuActs").innerHTML = "";
+    document.querySelectorAll(".msg.held").forEach((n) => n.classList.remove("held"));
+  }
+  function sheet({ eyebrow, title, text, body, actions }) {
+    $("menuEyebrow").textContent = eyebrow || "";
+    $("menuTitle").textContent = title || "";
+    $("menuText").textContent = text || "";
+    $("menuText").classList.toggle("hide", !text);
+    $("menuBody").innerHTML = "";
+    if (body) $("menuBody").append(body);
+    const acts = $("menuActs");
+    acts.innerHTML = "";
+    for (const a of actions || []) {
+      const b = el("button", "btn" + (a.kind ? " " + a.kind : ""), a.label);
+      if (a.sub) b.append(el("span", "sub", a.sub));
+      b.onclick = async () => {
+        closeSheet();
+        try {
+          await a.run();
+        } catch (e) {
+          toast(e.message || String(e), true);
+        }
+      };
+      acts.append(b);
+    }
+    const cancel = el("button", "btn ghost", "Cancel");
+    cancel.onclick = closeSheet;
+    acts.append(cancel);
+    $("menuSheet").classList.add("on");
+  }
+  function askText({ eyebrow, title, text, value, placeholder, action, run }) {
+    const wrap = el("label", "field");
+    const input = el("input");
+    input.value = value || "";
+    input.placeholder = placeholder || "";
+    input.autocomplete = "off";
+    input.maxLength = 60;
+    wrap.append(input);
+    sheet({ eyebrow, title, text, body: wrap, actions: [{ label: action || "Save", run: () => run(input.value.trim()) }] });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("menuActs").firstChild.click();
+    });
+    setTimeout(() => input.focus(), 60);
+  }
+  /* Long-press on touch, right-click on a desktop. A hold suppresses the tap
+     that would otherwise follow it. */
+  function onHold(node, fn) {
+    let timer = null, sx = 0, sy = 0;
+    const fire = () => {
+      timer = null;
+      node.dataset.held = "1";
+      if (navigator.vibrate) navigator.vibrate(15);
+      fn();
+    };
+    const cancel = () => {
+      clearTimeout(timer);
+      timer = null;
+    };
+    node.addEventListener("pointerdown", (e) => {
+      if (e.button || e.target.closest("audio, input, .acts")) return;
+      sx = e.clientX;
+      sy = e.clientY;
+      cancel();
+      delete node.dataset.held;
+      timer = setTimeout(fire, 550);
+    });
+    node.addEventListener("pointermove", (e) => {
+      if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel();
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => node.addEventListener(t, cancel));
+    node.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (node.dataset.held) return;
+      cancel();
+      fire();
+    });
+    node.addEventListener("click", (e) => {
+      if (!node.dataset.held) return;
+      delete node.dataset.held;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }, true);
+  }
+  function copyText(text) {
+    if (navigator.clipboard) return navigator.clipboard.writeText(text).then(() => toast("Copied")).catch(() => toast(text));
+    toast(text);
+  }
+  var fmtDate = (ts) => ts ? new Date(ts).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" }) : "unknown";
+  /* ---- contacts ---- */
+  function addContactSheet() {
+    sheet({
+      eyebrow: "Add a contact",
+      title: "Pair in person",
+      text: "Contacts are added by scanning codes with the two phones side by side. Nobody can add themselves to your contacts from a distance, and you check a safety number once so you know the link is private.",
+      actions: [
+        { label: "Show my code", sub: "They scan it with their phone", run: () => startInvite(null) },
+        { label: "Scan their code", kind: "alt", sub: "They show a code on their phone", run: () => startJoin() }
+      ]
+    });
+  }
+  async function contactSheet(c) {
+    c = await contact(c.id) || c;
+    const pres = presenceOf(c.id);
+    const body = el("div");
+    body.append(el("span", "eyebrow", "Key fingerprint"));
+    body.append(el("div", "keyGrid", (c.id.match(/.{1,4}/g) || [c.id]).join(" ")));
+    const facts = [PRESENCE_LABEL[pres], c.verified ? "safety number checked" : "safety number not checked", "paired " + fmtDate(c.addedAt)];
+    if (c.lastSeen) facts.push("last seen " + shortTime(c.lastSeen));
+    body.append(el("p", "dim", facts.join(" \xB7 ")));
+    sheet({
+      eyebrow: "Contact",
+      title: c.name,
+      body,
+      actions: [
+        { label: "Message", run: async () => {
+          const conv = await resolveDirect(c.id);
+          await renderHome();
+          openChat(conv.id);
+        } },
+        { label: "Rename", kind: "alt", run: () => renameContact(c) },
+        { label: "Delete contact", kind: "danger", sub: "Removes their key from this phone", run: () => confirmForget(c) }
+      ]
+    });
+  }
+  function renameContact(c) {
+    askText({
+      eyebrow: "Contact",
+      title: "Rename " + c.name,
+      value: c.name,
+      placeholder: "Name",
+      run: async (name) => {
+        if (!name) throw new Error("A name cannot be empty.");
+        const rec = await contact(c.id);
+        if (!rec) throw new Error("That contact is no longer on this phone.");
+        rec.name = name;
+        await saveContact(rec);
+        for (const cv of await conversations()) {
+          if (cv.type === "direct" && cv.peerId === c.id) {
+            cv.title = name;
+            await saveConversation(cv);
+          }
+        }
+        if (activeConv && activeConv.type === "direct" && activeConv.peerId === c.id) {
+          activeConv.title = name;
+          $("chatTitle").textContent = name;
+        }
+        renderHome();
+        toast("Renamed to " + name);
+      }
+    });
+  }
+  function confirmForget(c) {
+    sheet({
+      eyebrow: "Delete contact",
+      title: `Delete ${c.name}?`,
+      text: "Their key is removed from this phone. They can no longer reconnect, message you or pass messages through you, and anything you queued for them is not sent. To talk again you would pair in person and check the safety number again. Their phone keeps its own copy of your chats.",
+      actions: [
+        { label: "Delete contact and chat", kind: "danger", run: () => forgetContact(c, true) },
+        { label: "Delete contact, keep chat history", kind: "danger", run: () => forgetContact(c, false) }
+      ]
+    });
+  }
+  async function forgetContact(c, withChat) {
+    const l = link(c.id);
+    if (l) l.close();
+    const direct = (await conversations()).filter((cv) => cv.type === "direct" && cv.peerId === c.id);
+    if (withChat) {
+      for (const cv of direct) {
+        await deleteConversation(cv.id);
+        clearAlerts(cv.id);
+      }
+    }
+    const queued = (await outbox()).filter((e) => e.to === c.id && e.from === me.selfId);
+    await backend.delMany("outbox", queued.map((e) => e.id));
+    await removeContact(c.id);
+    if (activeConv && direct.some((cv) => cv.id === activeConv.id)) {
+      if (withChat) back();
+      else openChat(activeConv.id);
+    }
+    renderHome();
+    toast(`${c.name} deleted from this phone`);
+  }
+  /* ---- chats ---- */
+  function chatMenu(conv) {
+    conv = conv || activeConv;
+    if (!conv) return;
+    const actions = [];
+    if (conv.type === "direct") {
+      actions.push({ label: "Contact details", run: async () => {
+        const c = await contact(conv.peerId);
+        if (c) contactSheet(c);
+        else toast("This person is no longer in your contacts.", true);
+      } });
+      actions.push({ label: "Rename", kind: "alt", run: async () => {
+        const c = await contact(conv.peerId);
+        if (c) renameContact(c);
+        else renameConv(conv);
+      } });
+    } else {
+      actions.push({ label: "Rename group", kind: "alt", sub: "Only changes the name on this phone", run: () => renameConv(conv) });
+    }
+    actions.push({ label: "Clear messages", kind: "danger", sub: "Empties the chat on this phone", run: () => confirmClear(conv) });
+    actions.push({ label: conv.type === "group" ? "Delete group" : "Delete chat", kind: "danger", sub: "Removes it from this phone", run: () => confirmDeleteConv(conv) });
+    sheet({ eyebrow: conv.type === "group" ? "Group" : "Chat", title: conv.title, actions });
+  }
+  function renameConv(conv) {
+    askText({
+      eyebrow: conv.type === "group" ? "Group" : "Chat",
+      title: "Rename " + conv.title,
+      value: conv.title,
+      placeholder: "Name",
+      run: async (name) => {
+        if (!name) throw new Error("A name cannot be empty.");
+        const cv = await conversation(conv.id);
+        if (!cv) return;
+        cv.title = name;
+        await saveConversation(cv);
+        if (activeConv && activeConv.id === cv.id) {
+          activeConv.title = name;
+          $("chatTitle").textContent = name;
+        }
+        renderHome();
+      }
+    });
+  }
+  function confirmClear(conv) {
+    sheet({
+      eyebrow: "Clear messages",
+      title: `Clear ${conv.title}?`,
+      text: "Every message, photo and file in this chat is deleted from this phone. The chat itself stays, and the other phone keeps its copy.",
+      actions: [{ label: "Clear messages", kind: "danger", run: async () => {
+        const n = await clearConversation(conv.id);
+        if (activeConv && activeConv.id === conv.id) await openChat(conv.id);
+        renderHome();
+        toast(`Deleted ${n} message${n === 1 ? "" : "s"}`);
+      } }]
+    });
+  }
+  function confirmDeleteConv(conv) {
+    const hosting = conv.type === "group" && conv.hostId === me.selfId;
+    const text = conv.type !== "group" ? "The chat and everything in it are deleted from this phone. They stay in your contacts, so you can start a new chat with them at any time." : (hosting ? "You host this group. Messages between the other members pass through your phone, so once it is deleted they stop reaching each other. " : "You stop receiving this group's messages on this phone. ") + "Other members keep their copies.";
+    sheet({
+      eyebrow: conv.type === "group" ? "Delete group" : "Delete chat",
+      title: `Delete ${conv.title}?`,
+      text,
+      actions: [{ label: conv.type === "group" ? "Delete group" : "Delete chat", kind: "danger", run: async () => {
+        await deleteConversation(conv.id);
+        groupKeys.delete(conv.id);
+        clearAlerts(conv.id);
+        if (activeConv && activeConv.id === conv.id) back();
+        renderHome();
+        toast(`${conv.title} deleted from this phone`);
+      } }]
+    });
+  }
+  /* ---- single messages ---- */
+  function messageMenu(node, m) {
+    node.classList.add("held");
+    const mine = m.from === me.selfId;
+    const actions = [];
+    if (m.kind === "text" && m.text) actions.push({ label: "Copy text", run: () => copyText(m.text) });
+    if (m.blobId && (m.kind === "image" || m.kind === "audio" || m.kind === "file")) actions.push({ label: "Save to phone", run: () => saveAttachment(m) });
+    actions.push({
+      label: "Delete from this phone",
+      kind: "danger",
+      sub: m.state === "queued" ? "It has not been sent yet, and now will not be" : "Their copy is not affected",
+      run: async () => {
+        await deleteMessages([m.id]);
+        node.remove();
+        renderHome();
+      }
+    });
+    const who = mine ? "You" : m.senderName || (activeConv ? activeConv.title : "Them");
+    sheet({
+      eyebrow: "Message",
+      title: `${who} \xB7 ${shortTime(m.at)}`,
+      text: m.kind === "text" ? String(m.text || "").slice(0, 160) : PREVIEW[m.kind] || "",
+      actions
+    });
+  }
+  /* ---- saving attachments ---- */
+  var EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/mpeg": "mp3" };
+  function attachmentName(m) {
+    if (m.name) return m.name;
+    const ext = EXT[(m.mime || "").split(";")[0]] || "bin";
+    return `cyanotype-${m.kind}-${new Date(m.at).toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`;
+  }
+  function toB64(u8) {
+    let out = "";
+    for (let i = 0; i < u8.length; i += 32768) out += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+    return btoa(out);
+  }
+  /* In a browser a download link does the job. Inside the wrapper the WebView
+     ignores download links, so the file goes to Downloads through the plugin,
+     a slice at a time. */
+  async function saveAttachment(m) {
+    const rec = await backend.get("blobs", m.blobId);
+    if (!rec) throw new Error("That attachment is no longer on this phone.");
+    const bytes = await decryptAtRest(deviceKey, rec.data);
+    const name = attachmentName(m);
+    const mime = (m.mime || "application/octet-stream").split(";")[0];
+    if (NATIVE) {
+      const { id } = await NATIVE.saveStart({ name, mime });
+      try {
+        const SLICE = 3 * 65536;
+        for (let i = 0; i < bytes.length; i += SLICE) await NATIVE.saveChunk({ id, data: toB64(bytes.subarray(i, i + SLICE)) });
+        const r = await NATIVE.saveFinish({ id });
+        toast("Saved to " + (r && r.savedAs || "Downloads"));
+      } catch (e) {
+        NATIVE.saveAbort({ id }).catch(() => {
+        });
+        throw e;
+      }
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    const a = el("a");
+    a.href = url;
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 6e4);
+  }
+  /* ---- settings ---- */
+  var KEEP_CHOICES = [[0, "Forever"], [30, "30 days"], [90, "90 days"], [365, "1 year"]];
+  async function showSettings() {
+    show("settings");
+    paintNotifState();
+    const keep = await getSetting("keepDays") || 0;
+    const seg = $("keepSeg");
+    seg.innerHTML = "";
+    for (const [days, label] of KEEP_CHOICES) {
+      const b = el("button", days === keep ? "sel" : "", label);
+      b.onclick = () => setKeep(days, label).catch((e) => toast(e.message, true));
+      seg.append(b);
+    }
+    paintStats();
+  }
+  async function paintStats() {
+    const st = await storeStats().catch(() => null);
+    $("storeStats").textContent = st ? `${st.count} message${st.count === 1 ? "" : "s"} on this phone \xB7 ${fmtSize(st.bytes)} of photos, voice notes and files` : "";
+  }
+  function paintNotifState() {
+    const p = $("notifState"), btn = $("notifBtn");
+    btn.classList.remove("hide");
+    if (NATIVE) {
+      p.textContent = "New messages and calls show as notifications while Cyanotype is connected in the background. To change the sound or turn them off, go to Android Settings \u2192 Apps \u2192 Cyanotype \u2192 Notifications.";
+      btn.textContent = "Check notifications are allowed";
+      return;
+    }
+    if (!("Notification" in window)) {
+      p.textContent = "This browser cannot show notifications.";
+      btn.classList.add("hide");
+    } else if (Notification.permission === "granted") {
+      p.textContent = "On. You get an alert for new messages while this page is open in the background. If the browser closes the page, alerts stop until you open it again \u2014 the Android app avoids this.";
+      btn.classList.add("hide");
+    } else if (Notification.permission === "denied") {
+      p.textContent = "Blocked. Allow notifications for this site in your browser's settings, then come back.";
+      btn.classList.add("hide");
+    } else {
+      p.textContent = "Off. Turn them on to hear about new messages while the app is in the background.";
+      btn.textContent = "Turn on notifications";
+    }
+  }
+  async function setKeep(days, label) {
+    if (days) {
+      const n = await countBefore(Date.now() - days * 864e5);
+      if (n) {
+        sheet({
+          eyebrow: "Keep messages for",
+          title: `Keep ${label}?`,
+          text: `${n} message${n === 1 ? " is" : "s are"} already older than ${label} and will be deleted from this phone now. After that, messages are deleted as they pass that age.`,
+          actions: [{ label: `Delete ${n} and keep ${label}`, kind: "danger", run: async () => {
+            await putSetting("keepDays", days);
+            await applyRetention(true);
+            showSettings();
+            toast(`Deleted ${n} message${n === 1 ? "" : "s"}`);
+          } }]
+        });
+        return;
+      }
+    }
+    await putSetting("keepDays", days);
+    showSettings();
+    toast(days ? `Messages older than ${label} will be deleted` : "Messages are kept until you delete them");
+  }
+  var lastPrune = 0;
+  async function applyRetention(force) {
+    if (!force && Date.now() - lastPrune < 6 * 36e5) return 0;
+    lastPrune = Date.now();
+    const days = await getSetting("keepDays");
+    if (!days) return 0;
+    const n = await pruneBefore(Date.now() - days * 864e5);
+    if (n) {
+      renderHome();
+      if (activeConv && $("s-chat").classList.contains("on")) openChat(activeConv.id);
+    }
+    return n;
+  }
+  function pruneNowMenu() {
+    sheet({
+      eyebrow: "Delete older messages",
+      title: "Delete messages older than\u2026",
+      text: "Deletes from every chat on this phone. Messages still waiting to be sent are kept.",
+      actions: [[7, "1 week"], [30, "1 month"], [90, "3 months"], [365, "1 year"]].map(([d, label]) => ({
+        label,
+        kind: "danger",
+        run: async () => {
+          const n = await pruneBefore(Date.now() - d * 864e5);
+          toast(n ? `Deleted ${n} message${n === 1 ? "" : "s"}` : `Nothing older than ${label}`);
+          renderHome();
+          paintStats();
+        }
+      }))
+    });
+  }
   function wireUI() {
     const guard = (fn) => (...a) => {
       if (!me) return toast("Still starting up \u2014 one moment.", true);
@@ -3351,8 +4187,61 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     $("cancelScan").onclick = back;
     $("cancelPair").onclick = back;
     $("sendBtn").onclick = guard(sendText);
-    $("msgInput").addEventListener("keydown", (e) => e.key === "Enter" && guard(sendText)());
+    $("msgInput").addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+      e.preventDefault();
+      guard(sendText)();
+    });
+    $("msgInput").addEventListener("input", syncComposer);
+    $("plusBtn").onclick = guard(attachMenu);
+    $("chatTitleBtn").onclick = guard(async () => {
+      if (!activeConv) return;
+      if (activeConv.type === "direct") {
+        const c = await contact(activeConv.peerId);
+        if (c) return contactSheet(c);
+      }
+      chatMenu();
+    });
+    $("jumpBtn").onclick = () => {
+      const log = $("log");
+      log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
+      $("jumpBtn").classList.add("hide");
+    };
+    $("log").addEventListener("scroll", () => {
+      const log = $("log");
+      if (log.scrollHeight - log.scrollTop - log.clientHeight < 60) $("jumpBtn").classList.add("hide");
+    }, { passive: true });
     $("diagBtn").onclick = showDiagnostics;
+    $("settingsBtn").onclick = guard(showSettings);
+    $("addContactBtn").onclick = guard(addContactSheet);
+    $("chatMenuBtn").onclick = guard(() => chatMenu());
+    $("notifBtn").onclick = async () => {
+      const ok = await askNotify();
+      paintNotifState();
+      toast(ok ? "Notifications are on" : NATIVE ? "Notifications are blocked \u2014 allow them in Android Settings \u2192 Apps \u2192 Cyanotype \u2192 Notifications" : "Notifications were not allowed", !ok);
+    };
+    $("pruneNow").onclick = guard(pruneNowMenu);
+    $("menuSheet").addEventListener("click", (e) => {
+      if (e.target === $("menuSheet")) closeSheet();
+    });
+    /* The Android wrapper offers the system back gesture here first. Returning
+       false lets it send the app to the background instead of closing it. */
+    window.cyanotypeBack = () => {
+      if ($("menuSheet").classList.contains("on")) {
+        closeSheet();
+        return true;
+      }
+      const cur = document.querySelector(".screen.on");
+      if (cur && cur.id !== "s-home") {
+        back();
+        return true;
+      }
+      if (!$("paneContacts").classList.contains("hide")) {
+        switchTab("chats");
+        return true;
+      }
+      return false;
+    };
     $("rjCancel").onclick = back;
     $("rjCopy").onclick = () => {
       const txt = $("rjCode").textContent;
@@ -3370,11 +4259,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         toast("Trying to restore the link through someone you are both connected to\u2026");
         return;
       }
-      const startsIt = confirm(
-        "No shared connection to route through, so you will swap codes.\n\nOK if you are starting \u2014 you read yours out first.\nCancel if they have already read you theirs."
-      );
-      if (startsIt) await startRejoinCode();
-      else await startRejoinEnter();
+      sheet({
+        eyebrow: "Reconnect",
+        title: "Swap codes instead",
+        text: "Nobody you are both connected to can pass the reconnection along, so you will read short codes to each other. One of you goes first.",
+        actions: [
+          { label: "I'll read mine out first", sub: "Your phone shows a code to read to them", run: () => startRejoinCode() },
+          { label: "They've read me theirs", kind: "alt", sub: "Type in the code they gave you", run: () => startRejoinEnter() }
+        ]
+      });
     });
     $("fileInput").onchange = async (e) => {
       const f = e.target.files[0];
@@ -3398,6 +4291,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const payload = await recorder.stop();
         recorder = null;
         $("micBtn").classList.remove("rec");
+        syncComposer();
         await sendAttachment(payload, "audio");
       } else {
         try {
@@ -3419,6 +4313,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     });
     $("acceptBtn").onclick = async () => {
       $("ringSheet").classList.remove("on");
+      dropAlert("call");
       try {
         await callAccept();
       } catch (e) {
@@ -3449,10 +4344,19 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     $("locKeep").onclick = () => locExtend();
     $("locStop").onclick = () => locStop("stopped by you");
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden) return;
-      if (activeConv) markRead(activeConv).catch(() => {
-      });
+      if (appAway()) return;
+      if (activeConv) {
+        markRead(activeConv).catch(() => {
+        });
+        if ($("s-chat").classList.contains("on") && !appAway()) {
+          clearAlerts(activeConv.id);
+          resetUnread(activeConv.id).catch(() => {
+          });
+        }
+      }
       rejoinSweep().catch(() => {
+      });
+      applyRetention().catch(() => {
       });
     });
     window.addEventListener("pagehide", () => stopScanning());
@@ -3578,14 +4482,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
   function offerUpdate(worker) {
     swWaiting = worker;
-    $("cache").textContent = "update ready";
+    $("cache").textContent = "update ready to install";
     if (busy()) return;
     toast("New version ready \u2014 tap to update", false, applyUpdate);
   }
   function initUpdates() {
     navigator.serviceWorker.register("./sw.js").then((reg) => {
       swReg = reg;
-      $("cache").textContent = "offline ready";
+      $("cache").textContent = "works offline";
       if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
       reg.addEventListener("updatefound", () => {
         const sw = reg.installing;
@@ -3597,7 +4501,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         });
       });
       navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage("version");
-    }).catch(() => $("cache").textContent = "online only");
+    }).catch(() => $("cache").textContent = "needs a connection to open");
 
     navigator.serviceWorker.addEventListener("message", (ev) => {
       if (ev.data && ev.data.type === "version") swVersion = ev.data.version;
@@ -3612,7 +4516,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     // Browsers re-check the worker on their own schedule, which can be hours.
     // Returning to the app is the moment the user is most likely online.
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden || !swReg) return;
+      if (appAway() || !swReg) return;
       swReg.update().catch(() => {
       });
       if (swWaiting && !busy()) toast("New version ready \u2014 tap to update", false, applyUpdate);
@@ -3658,6 +4562,21 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if (queued) toast(`${queued} message${queued === 1 ? "" : "s"} waiting to be delivered when you next meet someone.`);
     carryFlush().catch(() => {
     });
+    ["presence", "linkopen", "linkclosed", "callstate", "callended", "locstart", "locstop"].forEach((t) => on(t, syncService));
+    wireNative();
+    if (!NATIVE && "serviceWorker" in navigator) {
+      // A tap on a browser notification: the worker hands over the chat to open.
+      navigator.serviceWorker.addEventListener("message", (ev) => {
+        if (ev.data && ev.data.type === "open" && ev.data.convId) openChat(ev.data.convId);
+      });
+      const want = new URLSearchParams(location.search).get("open");
+      if (want) {
+        history.replaceState(null, "", location.pathname);
+        openChat(want);
+      }
+    }
+    applyRetention(true).catch(() => {
+    });
     window.addEventListener("pagehide", () => {
       if (locShare) locStop("app closed");
       if (call) callEnd("App closed");
@@ -3675,22 +4594,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     typeof window !== "undefined" && window.__boot && window.__boot.fail((e == null ? void 0 : e.message) || String(e));
   });
 })();
-</script>
-<script>
-  // Capacitor only exists inside the wrapper, so the web build ignores this.
-  const FG = window.Capacitor?.Plugins?.Foreground;
-  if (FG) {
-    FG.start()
-      .then(() => console.log("foreground service running"))
-      .catch(e => console.log("foreground service refused:", e));
-
-    /* The service keeps the process alive; it does not stop Chromium
-       throttling a WebView it thinks is hidden. This has to run *after* the
-       app is backgrounded, which is why it hangs off visibilitychange. */
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) FG.keepVisible().catch(() => {});
-    });
-  }
 </script>
 </body>
 </html>
