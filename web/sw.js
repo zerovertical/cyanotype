@@ -8,13 +8,13 @@
    3. The swap happens when the page says so, not mid-call.
 */
 
-const VERSION = 'v11';
+const VERSION = 'v12';
 const CACHE = 'cyanotype-' + VERSION;
 
 /* CORE must land or the install fails outright, which leaves the previous
    worker in charge and the previous cache intact. EXTRA is cosmetic — a
    missing icon is not a reason to abandon a good update. */
-const CORE = ['./index.html', './'];
+const CORE = ['./index.html', './', './boot.js', './vendor.js', './app.js'];
 const EXTRA = ['./manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 /* Slow-but-alive networks are the dangerous case: captive portals and a hotspot

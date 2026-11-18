@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.3.0 — security release
+
+Update every phone together. A 1.3.0 phone cannot pair or reconnect with an
+older one, because the pairing codes and connection keys changed. Existing
+contacts keep working once both phones are updated. Re-pair any contact whose
+old pairing QR codes might have been photographed or filmed, since those
+codes contained the secret.
+
+### Groups: trust the connection, not the message
+- **Senders could fake who they were.** The app copied a message's own fields
+  over the real sender's identity, so a message could claim to come from
+  anyone. The real sender now always wins.
+- **Any contact could take over a group, or add you to one without asking.**
+  Invitations now ask before you join, and an existing group can only be
+  changed by its own host.
+- **Any member could rewrite the member list** (renaming people, removing
+  them). Only the host's list is accepted now.
+- **Any member could post as another member.** Members now accept group
+  messages only through the host, and the host checks each one came from the
+  member who sent it.
+
+### Pairing and keys
+- **The pairing QR code no longer contains the secret key.** Each phone shows
+  a one-time public key; both work out the same secret from the pair
+  (elliptic-curve Diffie-Hellman), so a photo or video of the codes reveals
+  nothing.
+- **Every connection now gets its own encryption keys.** Before, reconnecting
+  reused the same key while the message counter restarted, repeating AES-GCM
+  nonces.
+- **"They don't match" button on the safety number screen.** It closes the
+  link and forgets the contact. Adding someone new to a group now shows the
+  safety number too, before they get the group's key.
+
+### Other fixes
+- Delivery confirmations for relayed messages are signed by the recipient, so
+  a carrier can no longer make a message vanish while showing it delivered.
+- Android backups and phone-to-phone transfers no longer copy the app's keys
+  and messages.
+- Received files are checked against the 32 MB limit and their announced size,
+  so a contact cannot crash the app with a fake transfer.
+- Only the person you are calling can end the call.
+- Messages aimed at a group by someone outside it go to their direct chat;
+  location coordinates must be real numbers; a repeated group message is
+  shown once.
+- Diagnostics warns when the browser version shares storage with other pages
+  on the same site (README explains).
+- A Content Security Policy: the app's scripts moved out of the page into
+  `boot.js`, `vendor.js` and `app.js`, so the page can forbid inline scripts
+  and any connection to outside servers.
+
+### Tests
+- `npm test` runs the end-to-end suite and a new security suite (35 checks)
+  in which a hostile phone attacks each fix.
+
 ## 1.2.0
 
 ### A friendlier look

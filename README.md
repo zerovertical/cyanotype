@@ -20,7 +20,8 @@ received files.
 
 ## What is in this repo
 
-    web/                    the app itself: index.html, service worker, icons
+    web/                    the app: index.html (page + styles), app.js, boot.js
+                            (startup errors), vendor.js (QR libraries), sw.js, icons
     android/                the Android wrapper (Capacitor project)
       app/src/main/java/net/cyanotype/app/
         MainActivity.java     starts the app, handles the back gesture
@@ -28,11 +29,12 @@ received files.
         LinkService.java      the "Cyanotype is connected" background service
     probe/index.html        a test page for checking the phone keeps the app running
     tools/make-signing-key.mjs  makes the key releases are signed with
+    tests/                  end-to-end and security tests (npm test)
     .github/workflows/android.yml  builds the APK on GitHub
     RELEASING.md            how to publish a new version
     CHANGELOG.md            what changed in each version
 
-`web/index.html` is a single bundled file. If you keep the original source
+`web/app.js` is a single bundled file. If you keep the original source
 modules (crypto.js, net.js, store.js, app.js and so on) somewhere else, edit
 those and rebuild rather than editing the bundle, or the next build will undo
 the change.
@@ -46,6 +48,13 @@ direct connection are blocked. GitHub Pages works, but its simple
 "deploy from a branch" mode only publishes the repo root or a `docs/` folder,
 not `web/`, so hosting it there needs a small Pages workflow. To try it on your
 computer, run `npx serve web` and open the `localhost` address it prints.
+
+**Give it a site of its own.** Browsers keep storage per site, not per folder.
+At `yourname.github.io/cyanotype`, every other project page under
+`yourname.github.io` could read Cyanotype's keys and messages. Use a custom
+subdomain (for example `chat.yourdomain.com`) or a dedicated
+`something.github.io` account. Settings → Diagnostics → *storage isolation*
+says whether the copy you are using is shared.
 
 Before blaming the app for a connection problem, check that your two phones can
 reach each other at all. Plenty of guest networks and some ISP routers block
@@ -136,7 +145,7 @@ five minutes and unlock. Then put the real `web/index.html` back.
 | Verdict | Meaning | What to do |
 |---|---|---|
 | no throttling seen | the page ran normally throughout | nothing — best case |
-| throttled, still alive | timers stretched, still running | raise `STALE` in `web/index.html` well above the gap you saw |
+| throttled, still alive | timers stretched, still running | raise `STALE` in `web/app.js` well above the gap you saw |
 | frozen for N seconds | Android stopped the app | check the "connected" notification was showing |
 
 Note the probe has no links, so the background service does not run during it.
@@ -159,6 +168,24 @@ fails, the connection itself is being paused, which points at moving the
 connection into native Android code.
 
 Check Settings → Battery afterwards: holding a link open costs real power.
+
+---
+
+## Tests
+
+    npm install
+    npm test
+
+This runs two suites in your installed Chrome, using simulated phones that
+pair over a real local connection:
+
+- `tests/app.test.mjs` — pairing, messaging, notifications, files, contacts,
+  deleting, settings, groups, the interface.
+- `tests/security.test.mjs` — four simulated phones, one of them hostile,
+  attack each security fix in turn: forged senders, group takeovers, fake
+  delivery notes, oversized files, a stranger hanging up your call, and more.
+
+Set `CHROME_PATH` if Chrome is not installed in the usual place.
 
 ---
 
