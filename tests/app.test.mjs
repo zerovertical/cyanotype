@@ -181,6 +181,34 @@ try {
     `file reaches Android intact in ${chunks.length} pieces (${start.name}, ${start.mime})`);
   ok((await toastText(A)).includes("Downloads/Cyanotype"), "user is told where it was saved");
 
+  console.log("Reactions");
+  const sheetOnA = () => A.evaluate(() => document.getElementById("menuSheet").classList.contains("on"));
+  await A.locator("#log .msg.them", { hasText: "hello??" }).dispatchEvent("contextmenu");
+  await until(sheetOnA, 3000, "reaction sheet");
+  ok(await A.evaluate(() => document.querySelectorAll("#menuBody .reactBar .rx").length) === 6, "pressing and holding a message offers six reactions above the other options");
+  await A.locator("#menuBody .reactBar .rx").first().click();
+  await until(() => A.evaluate(() => { const b = [...document.querySelectorAll("#log .msg.them")].find((m) => m.textContent.includes("hello??")); return !!(b && b.querySelector(".reacts .react.mine")); }), 3000, "pill on A").catch(() => {});
+  ok(await A.evaluate(() => { const b = [...document.querySelectorAll("#log .msg.them")].find((m) => m.textContent.includes("hello??")); return b && b.querySelector(".reacts .react.mine").textContent === "\u{1F44D}"; }), "the reaction shows under the message, marked as yours");
+  // B's own copy of "hello??", and the reaction pill under it (null when none).
+  const bReact = () => B.evaluate(() => {
+    const b = [...document.querySelectorAll("#log .msg.me")].find((m) => m.textContent.includes("hello??"));
+    const p = b && b.querySelector(".reacts .react");
+    return p ? p.textContent : null;
+  });
+  await until(async () => (await bReact()) === "\u{1F44D}", 5000, "reaction reaches B").catch(() => {});
+  ok((await bReact()) === "\u{1F44D}", "it reaches the other phone and shows under their copy of that message");
+  await sleep(600);
+  await A.locator("#log .msg.them", { hasText: "hello??" }).dispatchEvent("contextmenu");
+  await until(sheetOnA, 3000, "reaction sheet again");
+  ok(await A.evaluate(() => document.querySelector("#menuBody .reactBar .rx.on") !== null && document.querySelector("#menuBody .reactWho").textContent.includes("You")), "the sheet shows who reacted, with your choice highlighted");
+  await A.locator("#menuBody .reactBar .rx.on").click();
+  await until(async () => (await bReact()) === null, 5000, "reaction removed").catch(() => {});
+  ok((await bReact()) === null && await A.evaluate(() => !document.querySelector("#log .msg.them .reacts")), "picking the same reaction again takes it back, on both phones");
+  if ((await bReact()) !== null || await A.evaluate(() => !!document.querySelector("#log .msg.them .reacts"))) {
+    console.log("    debug: B pill", await bReact(), "| A pill", await A.evaluate(() => (document.querySelector("#log .msg.them .reacts") || {}).textContent),
+      "| A sheet", await sheetOnA(), "| A toast", await toastText(A), "| B toast", await toastText(B));
+  }
+
   console.log("Deleting a single message");
   const countA = () => A.evaluate(() => document.querySelectorAll("#log .msg").length);
   const before = await countA();

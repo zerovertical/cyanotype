@@ -1,6 +1,6 @@
 {
   "name": "cyanotype-android",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "description": "Cyanotype: serverless peer-to-peer chat. The web app lives in web/; the Android wrapper keeps it running while the phone is locked and adds native notifications and file saving.",
   "scripts": {

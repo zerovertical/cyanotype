@@ -144,7 +144,8 @@ open it again. If that happens, set Cyanotype's battery usage to
   from this phone; they can no longer reach you until you pair again in person.
 - **Chat options**: the ⋯ button in a chat, or press and hold a chat in the
   list — rename, clear messages, delete the chat or group.
-- **Single messages**: press and hold a message to copy, save or delete it.
+- **Single messages**: press and hold a message to react to it, or to copy,
+  save or delete it. Tap a reaction under a message to see who reacted.
 - **Old messages**: Settings → *Keep messages for* deletes older messages
   automatically (30 days, 90 days or a year), or *Delete older messages now*.
 

@@ -487,6 +487,11 @@
   var HEARTBEAT = 5e3;
   var DISCONNECT_GRACE = 12e3;
   var STALE = 13e3;
+  /* A link that answers nothing for this long is dead, whatever the channel's
+     own state says: a phone that dozed off or changed network can leave the
+     channel showing "open" for a long time with nothing getting through. */
+  var DEAD_AFTER = 3e4;
+  var DEAD_CHECK = 8e3;
   var te2 = new TextEncoder();
   var td2 = new TextDecoder();
   var links = /* @__PURE__ */ new Map();
@@ -516,6 +521,7 @@
   }
   var Link = class {
     constructor(peerId, pc, dc, role) {
+      this.born = Date.now();
       this.peerId = peerId;
       this.pc = pc;
       this.dc = dc;
@@ -785,6 +791,19 @@
       l.sendCtrl({ t: "ping" }).catch(() => {
       });
       if (l.lastBeat && now - l.lastBeat > STALE) l.setPresence("away");
+      /* Silent too long: allow one more round of pings (our own timers may just
+         have been asleep), then close it. Closing is what lets the phones
+         reconnect, and moves anything sent into the dead link back to the
+         queue, instead of both sides waiting on a link that only looks open. */
+      const heard = l.lastBeat || l.born;
+      if (now - heard < DEAD_AFTER) {
+        l.deadCheck = 0;
+      } else if (!l.deadCheck) {
+        l.deadCheck = now;
+      } else if (now - l.deadCheck > DEAD_CHECK && heard < l.deadCheck) {
+        emit("linkdead", { peerId: l.peerId, heard });
+        l.close();
+      }
     }
   }, HEARTBEAT);
   document.addEventListener("visibilitychange", () => {
@@ -796,13 +815,18 @@
     await Promise.all(members.filter((id) => id !== exceptPeerId).map((id) => links.get(id)).filter((l) => l == null ? void 0 : l.open).map((l) => l.sendCtrl({ ...payload, convId }).catch(() => {
     })));
   }
-  async function sendGroupText(conv, selfId2, text, groupKey) {
+  async function sendGroupText(conv, selfId2, text, groupKey, id = crypto.randomUUID()) {
+    return sendGroupBody(conv, selfId2, { id, from: selfId2, text, at: Date.now() }, groupKey);
+  }
+  /* Anything said in a group, sealed with the group key and sent through the
+     host. The host and members apply the same trust rules to all of it. */
+  async function sendGroupBody(conv, selfId2, body, groupKey) {
     var _a;
     const nonce = crypto.getRandomValues(new Uint8Array(12));
     const ct = new Uint8Array(await crypto.subtle.encrypt(
       { name: "AES-GCM", iv: nonce },
       groupKey,
-      te2.encode(JSON.stringify({ id: crypto.randomUUID(), from: selfId2, text, at: Date.now() }))
+      te2.encode(JSON.stringify(body))
     ));
     const packed = btoa(String.fromCharCode(...nonce, ...ct));
     if (conv.hostId === selfId2) {
@@ -2574,7 +2598,7 @@
   async function holdTip() {
     if (!$("log").querySelector(".msg") || await getSetting("tipHold")) return;
     await putSetting("tipHold", true);
-    setTimeout(() => toast("Tip: press and hold a message to copy, save or delete it"), 700);
+    setTimeout(() => toast("Tip: press and hold a message to react, copy, save or delete it"), 700);
   }
   var clockTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   function dayLabel(ts) {
@@ -2655,8 +2679,15 @@
       tick.title = { queued: "waiting to be sent", sent: "sent", delivered: "delivered to their phone", read: "opened" }[st] || st;
       stamp.append(tick);
     }
+    const pills = reactionPills(m);
+    if (pills) wrap.append(pills);
     wrap.append(stamp);
-    onHold(wrap, () => messageMenu(wrap, m));
+    onHold(wrap, () => messageMenu(wrap, m).catch(() => {
+    }));
+    wrap.addEventListener("click", (e) => {
+      if (e.target.closest(".reacts")) messageMenu(wrap, m).catch(() => {
+      });
+    });
     const day = new Date(m.at).toDateString();
     if (log.dataset.day !== day) {
       log.dataset.day = day;
@@ -2755,8 +2786,9 @@
     syncComposer();
     try {
       if (activeConv.type === "group") {
-        await sendGroupText(activeConv, me.selfId, text, groupKeys.get(activeConv.id));
-        const gm = await addMessage({ convId: activeConv.id, from: me.selfId, kind: "text", text });
+        const gid = crypto.randomUUID();
+        await sendGroupText(activeConv, me.selfId, text, groupKeys.get(activeConv.id), gid);
+        const gm = await addMessage({ convId: activeConv.id, from: me.selfId, kind: "text", text, id: gid });
         await renderMessage(gm);
         renderHome();
         return;
@@ -2778,8 +2810,9 @@
   async function queueText(text) {
     const conv = activeConv;
     try {
-      const env = await carrySeal(conv.peerId, conv.id, "text", { text });
-      const m = await addMessage({ convId: conv.id, from: me.selfId, kind: "text", text, state: "queued" });
+      const id = crypto.randomUUID();
+      const env = await carrySeal(conv.peerId, conv.id, "text", { text, mid: id });
+      const m = await addMessage({ convId: conv.id, from: me.selfId, kind: "text", text, state: "queued", id });
       await patchMessage(m.id, { envId: env.id });
       m.envId = env.id;
       await renderMessage(m);
@@ -3057,6 +3090,11 @@
         if ((await backend.byConv(convId)).some((r) => r.rid === body.id)) return;
       }
       const senderName = ((_a = conv.names) == null ? void 0 : _a[body.from]) || "Someone";
+      if (body.kind === "react") {
+        await takeReaction(conv, body.from, body, senderName);
+        if (hosting) await relayToRoom(convId, conv.members, peerId, { t: "group-msg", packed });
+        return;
+      }
       if (body.kind === "location" || body.kind === "location-end") {
         await onLocation({ ...body, convId, from: body.from, senderName, ending: body.kind === "location-end" });
         if (hosting) await relayToRoom(convId, conv.members, peerId, { t: "group-msg", packed });
@@ -3168,6 +3206,12 @@
         return void onCarryAck(msg, peerId);
       case "receipt":
         return void onReceipt(peerId, msg);
+      case "react": {
+        // The reactor is whoever's link this came in on, never a field inside it.
+        const conv = await threadFor(peerId, msg.convId);
+        if (conv && conv.type === "direct" && conv.peerId === peerId) await takeReaction(conv, peerId, msg);
+        return;
+      }
       case "rejoin":
         return void rejoinRelay(peerId, msg).catch(() => {
         });
@@ -3355,12 +3399,38 @@
   on("carried", async (ev) => {
     const { env, body } = ev.detail;
     const conv = await threadFor(env.from, env.convId);
+    if (env.kind === "react") {
+      if (conv && conv.type === "direct" && conv.peerId === env.from) await takeReaction(conv, env.from, body);
+      return;
+    }
     if (env.kind === "text") {
-      const m = await addMessage({ convId: conv.id, from: env.from, kind: "text", text: body.text, at: env.at, state: "relayed" });
+      /* A message resent after a dead link carries its original id, in case
+         the first copy did get through after all. */
+      const mid = typeof body.mid === "string" ? body.mid.slice(0, 64) : void 0;
+      if (mid && (await messages(conv.id, 400)).some((r) => r.rid === mid && r.from === env.from)) return;
+      const m = await addMessage({ convId: conv.id, from: env.from, kind: "text", text: body.text, at: env.at, state: "relayed", rid: mid });
       if ((activeConv == null ? void 0 : activeConv.id) === conv.id) await renderMessage(m);
       else toast(`${conv.title} (relayed): ${String(body.text).slice(0, 50)}`);
       noteIncoming(conv, body.text);
       renderHome();
+    }
+  });
+  /* Texts that went into a link that turned out to be dead, and were never
+     confirmed, go back in the queue and are delivered when the phones next
+     meet. Only messages sent around or after the last sign of life count. */
+  on("linkdead", async (ev) => {
+    const { peerId, heard } = ev.detail;
+    try {
+      const conv = (await conversations()).find((c) => c.type === "direct" && c.peerId === peerId);
+      if (!conv) return;
+      for (const m of await messages(conv.id, 200)) {
+        if (m.from !== me.selfId || m.kind !== "text" || m.state !== "sent" || m.at < heard - 5e3) continue;
+        const env = await carrySeal(peerId, conv.id, "text", { text: m.text, mid: m.wireId || m.id });
+        await patchMessage(m.id, { state: "queued", envId: env.id });
+        m.state = "queued";
+        if ((activeConv == null ? void 0 : activeConv.id) === conv.id) refreshTicks(m);
+      }
+    } catch (e) {
     }
   });
   on("carrybad", (ev) => toast("Discarded a relayed message \u2014 " + ev.detail.reason, true));
@@ -3651,8 +3721,10 @@
      that would otherwise follow it. */
   function onHold(node, fn) {
     let timer = null, sx = 0, sy = 0;
+    let firedAt = 0;
     const fire = () => {
       timer = null;
+      firedAt = Date.now();
       node.dataset.held = "1";
       if (navigator.vibrate) navigator.vibrate(15);
       fn();
@@ -3673,9 +3745,11 @@
       if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel();
     });
     ["pointerup", "pointercancel", "pointerleave"].forEach((t) => node.addEventListener(t, cancel));
+    /* A touch long-press fires our timer and then the browser's contextmenu
+       too: ignore that echo, but not a genuine second right-click later. */
     node.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      if (node.dataset.held) return;
+      if (Date.now() - firedAt < 500) return;
       cancel();
       fire();
     });
@@ -3859,8 +3933,125 @@
     });
   }
   /* ---- single messages ---- */
-  function messageMenu(node, m) {
+  /* ---- reactions ---- */
+  /* One reaction per person per message, from a fixed set. Picking the same
+     one again takes it back. A reaction names its message by the id the
+     sender gave it, which both phones store, and the reactor is always the
+     phone it came from: a contact cannot react in someone else's name. */
+  var REACTIONS = ["\u{1F44D}", "\u2764\uFE0F", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
+  // The same id both phones know a message by: the sender's.
+  var originId = (m) => m.from === me.selfId ? m.wireId || m.id : m.rid;
+  var canReact = (m) => !!originId(m) && m.kind !== "call" && m.state !== "queued";
+  async function findByOrigin(convId, author, oid) {
+    const rows = await backend.byConv(convId);
+    return rows.find((r) => r.from === author && (author === me.selfId ? (r.wireId || r.id) === oid : r.rid === oid));
+  }
+  /* Apply a reaction to our copy. Newer wins, so reactions queued while apart
+     and live ones arriving later settle the same way on both phones. */
+  async function applyReaction(convId, author, oid, reactor, emoji, at) {
+    const row = await findByOrigin(convId, author, oid);
+    if (!row) return null;
+    const all = { ...row.reactions || {} };
+    const prev = all[reactor];
+    if (prev && prev.at >= at) return null;
+    all[reactor] = { e: emoji, at };
+    await patchMessage(row.id, { reactions: all });
+    row.reactions = all;
+    paintReactions(row);
+    return row;
+  }
+  async function takeReaction(conv, reactor, r, senderName) {
+    if (!r || typeof r.target !== "string" || r.target.length > 64 || typeof r.author !== "string") return;
+    if (r.emoji !== null && !REACTIONS.includes(r.emoji)) return;
+    const at = typeof r.at === "number" && r.at <= Date.now() + 6e4 ? r.at : Date.now();
+    // In a one-to-one chat only the two of us wrote anything.
+    if (conv.type === "direct" && r.author !== me.selfId && r.author !== reactor) return;
+    if (conv.type === "group" && r.author !== me.selfId && r.author !== conv.hostId && !(conv.members || []).includes(r.author)) return;
+    const row = await applyReaction(conv.id, r.author, r.target, reactor, r.emoji, at);
+    if (!row || !r.emoji || row.from !== me.selfId) return;
+    if ((activeConv == null ? void 0 : activeConv.id) !== conv.id) {
+      const who = senderName || conv.title;
+      const what = row.kind === "text" ? `\u201C${String(await decryptText(deviceKey, row.body).catch(() => "")).slice(0, 40)}\u201D` : (PREVIEW[row.kind] || "your message").toLowerCase();
+      toast(`${who} reacted ${r.emoji} to ${what}`);
+    }
+  }
+  async function react(m, emoji) {
+    const conv = activeConv;
+    if (!conv) return;
+    const mine = (m.reactions || {})[me.selfId];
+    if (mine && mine.e === emoji) emoji = null;
+    const r = { target: originId(m), author: m.from, emoji, at: Date.now() };
+    const groupKey = conv.type === "group" && groupKeys.get(conv.id);
+    if (conv.type === "group") {
+      const via = conv.hostId === me.selfId ? (conv.members || []).some((id) => (link(id) || {}).open) : (link(conv.hostId) || {}).open;
+      if (!groupKey || !via) throw new Error("Not connected to the group right now, so the reaction cannot be sent.");
+    }
+    // Shown straight away; the send can sit behind a file still going out.
+    await applyReaction(conv.id, m.from, r.target, me.selfId, emoji, r.at);
+    if (conv.type === "group") {
+      await sendGroupBody(conv, me.selfId, { id: crypto.randomUUID(), from: me.selfId, kind: "react", ...r }, groupKey);
+      return;
+    }
+    const l = link(conv.peerId);
+    if (l == null ? void 0 : l.open) {
+      try {
+        await l.sendCtrl({ t: "react", convId: conv.id, ...r });
+        return;
+      } catch (e) {
+      }
+    }
+    // Apart: sealed and queued like a message, delivered when you next meet.
+    await carrySeal(conv.peerId, conv.id, "react", r);
+  }
+  function reactionPills(m) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const v of Object.values(m.reactions || {})) if (v && v.e) counts.set(v.e, (counts.get(v.e) || 0) + 1);
+    if (!counts.size) return null;
+    const mine = ((m.reactions || {})[me.selfId] || {}).e;
+    const box = el("div", "reacts");
+    for (const e of REACTIONS) {
+      if (!counts.has(e)) continue;
+      const n = counts.get(e);
+      box.append(el("span", "react" + (e === mine ? " mine" : ""), n > 1 ? e + "\u2009" + n : e));
+    }
+    return box;
+  }
+  function paintReactions(m) {
+    const node = $("log").querySelector(`.msg[data-id="${m.id}"]`);
+    if (!node) return;
+    const old = node.querySelector(".reacts");
+    const fresh = reactionPills(m);
+    if (old) old.remove();
+    if (fresh) node.insertBefore(fresh, node.querySelector(".t"));
+  }
+  function reactionBar(m) {
+    const bar = el("div", "reactBar");
+    const mine = ((m.reactions || {})[me.selfId] || {}).e;
+    for (const e of REACTIONS) {
+      const b = el("button", "rx" + (e === mine ? " on" : ""), e);
+      b.setAttribute("aria-label", "React " + e + (e === mine ? " (tap again to remove)" : ""));
+      b.onclick = () => {
+        closeSheet();
+        react(m, e).catch((err) => toast(err.message || String(err), true));
+      };
+      bar.append(b);
+    }
+    return bar;
+  }
+  function reactorsLine(m) {
+    const names = [];
+    for (const [id, v] of Object.entries(m.reactions || {})) {
+      if (!v || !v.e) continue;
+      const who = id === me.selfId ? "You" : (activeConv && activeConv.names && activeConv.names[id]) || (activeConv && activeConv.type === "direct" ? activeConv.title : "Someone");
+      names.push(`${who} ${v.e}`);
+    }
+    return names.length ? el("p", "dim reactWho", names.join(" \xB7 ")) : null;
+  }
+  async function messageMenu(node, m) {
     node.classList.add("held");
+    // The bubble was drawn earlier: reactions and ticks may have moved on since.
+    const row = await backend.get("messages", m.id).catch(() => null);
+    if (row) m = { ...m, reactions: row.reactions, state: row.state, wireId: row.wireId, rid: row.rid };
     const mine = m.from === me.selfId;
     const actions = [];
     if (m.kind === "text" && m.text) actions.push({ label: "Copy text", run: () => copyText(m.text) });
@@ -3876,10 +4067,18 @@
       }
     });
     const who = mine ? "You" : m.senderName || (activeConv ? activeConv.title : "Them");
+    let body = null;
+    if (canReact(m)) {
+      body = el("div");
+      body.append(reactionBar(m));
+      const line = reactorsLine(m);
+      if (line) body.append(line);
+    }
     sheet({
       eyebrow: "Message",
       title: `${who} \xB7 ${shortTime(m.at)}`,
       text: m.kind === "text" ? String(m.text || "").slice(0, 160) : PREVIEW[m.kind] || "",
+      body,
       actions
     });
   }

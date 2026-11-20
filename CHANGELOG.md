@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.5.0 — reactions
+
+- **Emoji reactions.** Press and hold a message (right-click on a computer)
+  and pick 👍 ❤️ 😂 😮 😢 or 🙏. Reactions show under the message on both
+  phones; tap one to see who reacted. One reaction each per message: pick
+  another to change it, or the same one again to take it back.
+- **Works in groups and while apart.** In a group, reactions go through the
+  host like messages do. In a one-to-one chat, a reaction made while you are
+  not connected is sealed and queued, and arrives when you next meet.
+- **The same trust rules as messages.** A reaction is credited to the phone
+  it came from, never to a name written inside it, so nobody can react in
+  someone else's name. Only the six reactions are accepted.
+- Fixed: on a computer, right-clicking the same message a second time did
+  nothing.
+
+## 1.4.1 — links that look open but are dead
+
+- **A link could die without the app noticing.** After a phone dozed off or
+  its Wi-Fi changed, the connection could keep reporting itself as open while
+  nothing got through. The contact showed as "away", messages in both
+  directions went into it and showed one tick but never arrived, and because
+  the link still counted as open, nothing tried to reconnect. Now a link that
+  answers nothing for about 40 seconds is closed, so the phones reconnect on
+  the Wi-Fi as normal.
+- **Messages sent into a dead link are resent.** Texts that went out while the
+  link was silent and were never confirmed go back in the queue and are
+  delivered when the phones reconnect. They carry their original id, so if
+  the first copy did arrive the other phone shows it only once.
+
 ## 1.4.0 — staying connected
 
 Update both phones. The browser version gets the bug fixes but cannot find

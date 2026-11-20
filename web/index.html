@@ -193,6 +193,15 @@ body.inChat #app{height:100dvh;min-height:0}
   font-variant-numeric:tabular-nums;white-space:normal}
 .msg .att{display:block;max-width:100%;border-radius:14px;margin:2px 0}
 .msg.held{outline:2px solid var(--amber);outline-offset:2px}
+.msg .reacts{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 0;white-space:normal}
+.msg .react{background:var(--ink);color:var(--paper);border:1px solid var(--line);border-radius:var(--pill);
+  padding:1px 8px;font-size:14px;line-height:1.5;cursor:pointer}
+.msg .react.mine{border-color:var(--amber)}
+.reactBar{display:flex;justify-content:space-between;gap:6px;margin:4px 0 10px}
+.reactBar .rx{flex:1;font-size:26px;line-height:1;padding:10px 0;border-radius:16px;
+  background:var(--raised);border:1px solid var(--line);color:inherit}
+.reactBar .rx.on{border-color:var(--amber);background:var(--ink)}
+.reactWho{margin:0 0 8px}
 audio.att{width:240px;max-width:100%}
 .jump{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);z-index:5;
   background:var(--raised);color:var(--paper);border:1px solid var(--line);border-radius:var(--pill);

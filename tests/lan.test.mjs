@@ -118,7 +118,7 @@ async function phone(name, { exempt = true } = {}) {
   await page.goto(`http://localhost:${PORT}/index.html`);
   await until(() => page.evaluate(() => document.getElementById("state").dataset.state === "idle"), 15000, name + " boot");
   page.id = await page.evaluate(() => window.__t.me().selfId);
-  await page.evaluate(() => { window.__ev = []; for (const t of ["linkopen", "linkclosed", "rejoined", "carrybad", "carryheld", "baddata", "rejoinbad", "presence"]) window.__t.on(t, (e) => window.__ev.push(t + ":" + JSON.stringify(e.detail).slice(0, 60) + "@" + (Date.now() % 100000))); });
+  await page.evaluate(() => { window.__ev = []; for (const t of ["linkopen", "linkclosed", "linkdead", "rejoined", "carrybad", "carryheld", "baddata", "rejoinbad", "presence"]) window.__t.on(t, (e) => window.__ev.push(t + ":" + JSON.stringify(e.detail).slice(0, 60) + "@" + (Date.now() % 100000))); });
   return page;
 }
 const screen = (p) => p.evaluate(() => document.querySelector(".screen.on").id);
@@ -209,6 +209,20 @@ try {
   }
   ok(await until(() => A.evaluate(() => ![...document.querySelectorAll("#log .msg.me")].some((m) => m.classList.contains("queued"))), 5000).catch(() => false), "and A's tick leaves 'waiting to be sent'");
 
+  console.log("A reaction made while apart");
+  net.paused = true;
+  await drop(A, B);
+  await B.locator("#log .msg.them", { hasText: "test after a long gap" }).dispatchEvent("contextmenu");
+  await until(() => B.evaluate(() => document.getElementById("menuSheet").classList.contains("on")), 3000, "reaction sheet");
+  await B.locator("#menuBody .reactBar .rx").nth(1).click();
+  await sleep(500);
+  ok(await B.evaluate(async () => (await window.__t.outbox()).some((e) => e.kind === "react")), "with the other phone unreachable, the reaction is sealed and queued like a message");
+  net.paused = false;
+  await appstate(A, false); await appstate(A, true);
+  await until(async () => (await linked(A, B)) && (await linked(B, A)), 20000, "reconnect for reaction");
+  const heart = await until(() => A.evaluate(() => [...document.querySelectorAll("#log .msg.me")].some((m) => m.textContent.includes("test after a long gap") && m.querySelector(".reacts .react") && m.querySelector(".reacts .react").textContent === "\u2764\uFE0F")), 15000, "queued reaction arrives").catch(() => false);
+  ok(!!heart, "when they reconnect it arrives and shows under the right message");
+
   console.log("A stranger on the same Wi-Fi");
   await drop(A, B);
   net.paused = true;   // freeze the real phones' own probing while we attack
@@ -273,6 +287,36 @@ try {
     throw e;
   });
   ok(true, "opening the app reconnects straight away");
+
+  console.log("A link that looks open but carries nothing (the reported 'away' state)");
+  await until(async () => (await linked(A, B)) && (await linked(B, A)), 20000, "linked before zombie");
+  await appstate(B, true);
+  await A.click("#backBtn");
+  await until(async () => (await screen(A)) === "s-home", 5000, "A home");
+  await A.click("#convList .row >> nth=0");
+  await until(async () => (await screen(A)) === "s-chat", 5000, "A back in chat");
+  // Both channels stay "open", but nothing sent on them arrives any more.
+  await A.evaluate((id) => { window.__t.link(id).dc.send = () => {}; }, B.id);
+  await B.evaluate((id) => { window.__t.link(id).dc.send = () => {}; }, A.id);
+  await A.fill("#msgInput", "sent into the void");
+  await A.click("#sendBtn");
+  await sleep(500);
+  ok(await A.evaluate(() => [...document.querySelectorAll("#log .msg.me")].pop().querySelector(".ticks").textContent === "\u2713"), "while the dead link still looks open, the message shows one tick (sent, not delivered)");
+  await until(() => A.evaluate(() => window.__ev.some((e) => e.startsWith("linkdead:"))), 70000, "dead link closed");
+  ok(true, "after about 40 seconds of silence the dead link is closed, instead of staying 'away' for ever");
+  await until(async () => (await linked(A, B)) && (await linked(B, A)) && await A.evaluate((id) => window.__t.link(id).dc.send.toString().length > 20, B.id), 30000, "reconnect after dead link");
+  ok(true, "and the phones reconnect on the Wi-Fi by themselves");
+  const once = await until(() => B.evaluate(() => [...document.querySelectorAll("#log .msg.them")].filter((m) => m.textContent.includes("sent into the void")).length === 1), 20000, "resent message").catch(() => false);
+  ok(!!once, "the message that went into the dead link is resent and arrives exactly once");
+  if (!once && process.env.LAN_DEBUG) {
+    console.log("A msgs", await A.evaluate(async () => (await window.__t.backend.getAll("messages")).map((m) => [m.from.slice(0, 4), m.kind, m.state, m.envId && m.envId.slice(0, 6), m.at % 1e6])));
+    console.log("A outbox", await A.evaluate(async () => (await window.__t.outbox()).map((e) => [e.id.slice(0, 6), e.to.slice(0, 6)])));
+    console.log("B msgs", await B.evaluate(async () => (await window.__t.backend.getAll("messages")).map((m) => [m.from.slice(0, 4), m.kind, m.state, m.rid && m.rid.slice(0, 6)])));
+    console.log("B log", await B.evaluate(() => [...document.querySelectorAll("#log .msg")].map((m) => m.textContent.slice(0, 25))), await screen(B));
+    console.log("A ev", (await A.evaluate(() => window.__ev)).slice(-12));
+  }
+  await sleep(3000);
+  ok(await B.evaluate(() => [...document.querySelectorAll("#log .msg.them")].filter((m) => m.textContent.includes("sent into the void")).length) === 1, "no duplicate turns up later");
 
   const real404 = errors.filter((e) => !/favicon|404/.test(e));
   ok(real404.length === 0, "no page errors" + (real404.length ? ": " + real404.join(" | ") : ""));

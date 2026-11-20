@@ -186,6 +186,35 @@ try {
   const got = (await texts(C)).find((r) => r.rid === "f3");
   ok(!!got && got.from === B.id, "an honest message from B reaches C through the host, attributed to B");
 
+  console.log("Reactions: the reactor is whoever's link it came on");
+  const forgeBody = (P, body) => P.evaluate(async ([g, b]) => {
+    const conv = await window.__t.conversation(g);
+    const key = await window.__t.importGroupKey(conv.groupKey);
+    const nonce = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, new TextEncoder().encode(JSON.stringify({ ...b, at: Date.now() }))));
+    const all = new Uint8Array(12 + ct.length); all.set(nonce); all.set(ct, 12);
+    return window.__t.b64(all);
+  }, [G, body]);
+  const reactsOn = (P, rid) => P.evaluate(async ([g, r]) => {
+    const row = (await window.__t.backend.byConv(g)).find((m) => m.rid === r);
+    const out = {};
+    for (const [k, v] of Object.entries((row && row.reactions) || {})) out[k] = v.e;
+    return out;
+  }, [G, rid]);
+  const thumbs = "\u{1F44D}", laugh = "\u{1F602}";
+  await ctrl(B, A, { t: "group-msg", convId: G, packed: await forgeBody(B, { id: "r1", from: B.id, kind: "react", target: "f3", author: B.id, emoji: thumbs }) });
+  await until(async () => (await reactsOn(C, "f3"))[B.id] === thumbs, 6000, "group reaction relayed").catch(() => {});
+  ok((await reactsOn(A, "f3"))[B.id] === thumbs && (await reactsOn(C, "f3"))[B.id] === thumbs, "B's reaction in the group reaches the host and is relayed to C, credited to B");
+  await ctrl(B, A, { t: "group-msg", convId: G, packed: await forgeBody(B, { id: "r2", from: C.id, kind: "react", target: "f3", author: B.id, emoji: laugh }) });
+  await sleep(800);
+  ok(!(C.id in (await reactsOn(A, "f3"))) && !(C.id in (await reactsOn(C, "f3"))), "B cannot react in C's name: the host refuses it and relays nothing");
+  await ctrl(B, A, { t: "group-msg", convId: G, packed: await forgeBody(B, { id: "r3", from: B.id, kind: "react", target: "f3", author: B.id, emoji: "<img src=x onerror=alert(1)>" }) });
+  await sleep(800);
+  ok((await reactsOn(A, "f3"))[B.id] === thumbs, "anything but the six reactions is ignored");
+  await ctrl(B, C, { t: "react", convId: G, target: "f3", author: B.id, emoji: laugh, at: Date.now() + 1e3 });
+  await sleep(800);
+  ok((await reactsOn(C, "f3"))[B.id] === thumbs, "a reaction sent outside the group cannot land on a group message");
+
   console.log("Fix 10: replays, outsiders and bad coordinates");
   await ctrl(B, A, { t: "group-msg", convId: G, packed: honest });
   await sleep(800);
