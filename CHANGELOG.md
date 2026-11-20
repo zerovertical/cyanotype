@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.4.0 — staying connected
+
+Update both phones. The browser version gets the bug fixes but cannot find
+phones on the network by itself; that needs the Android app.
+
+### Reconnecting by itself on the same Wi-Fi
+- When a link drops, the phones now find each other on the local network and
+  reconnect with no codes and no other contact in between. Before, two phones
+  on their own had to swap codes by hand.
+- A stranger on the same network learns only that a Cyanotype phone is there.
+  Phones ask about missing contacts with one-off tags keyed by the pairing
+  secret, both prove they hold that secret before either sends an offer, and
+  the offer is sealed with the pairing key.
+- Always on while the app is open. After a drop it keeps looking in the
+  background for 30 minutes by default: Settings → *Staying connected* →
+  Off, 30 minutes or Until found.
+
+### Keeping links up with the screen off
+- While a link is open the app holds a Wi-Fi lock (no Wi-Fi power-saving) and
+  a wake lock, so keep-alive checks are answered while the phone is locked.
+- The first time a link opens, the app asks once to be allowed to skip
+  battery optimisation, which Android needs before it honours those locks in
+  deep sleep. The same switch is in Settings → *Staying connected*.
+
+### Fixes
+- After any reconnection the app could start sending before the new
+  connection's keys were ready. Those sends failed silently, so a message
+  queued while you were apart could stay "waiting to be sent" until the next
+  reconnection. Nothing is now sent, read or announced until the keys are in
+  place.
+- A queued message's bubble stayed faded after it was delivered.
+- If both phones started a reconnection at the same moment, both offers could
+  be answered, with one half-built link replacing the other. Now the offer
+  from one side (the lower phone ID) always wins.
+
 ## 1.3.0 — security release
 
 Update every phone together. A 1.3.0 phone cannot pair or reconnect with an

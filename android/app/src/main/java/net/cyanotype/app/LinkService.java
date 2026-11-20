@@ -7,8 +7,10 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
 
@@ -37,6 +39,47 @@ public class LinkService extends Service {
        service is holding a link open. */
     static volatile boolean running = false;
 
+    /* Held only while the service is: that is, while a link is open or the page
+       is looking for a contact that just dropped.
+
+       The Wi-Fi lock stops the radio dozing between packets with the screen
+       off, which otherwise lets the link's keep-alive checks go unanswered
+       until WebRTC gives up on it. The wake lock keeps the CPU running the
+       page's timers. Android honours both during deep sleep only when the user
+       has let the app skip battery optimisation, which the page asks for. They
+       cost battery, which is why they go the moment the service does. */
+    private WifiManager.WifiLock wifiLock;
+    private PowerManager.WakeLock wakeLock;
+
+    @SuppressWarnings("deprecation")
+    private void holdLocks() {
+        try {
+            if (wifiLock == null) {
+                WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+                if (wm != null) {
+                    wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "cyanotype:link");
+                    wifiLock.setReferenceCounted(false);
+                }
+            }
+            if (wifiLock != null && !wifiLock.isHeld()) wifiLock.acquire();
+            if (wakeLock == null) {
+                PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+                if (pm != null) {
+                    wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "cyanotype:link");
+                    wakeLock.setReferenceCounted(false);
+                }
+            }
+            if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire();
+        } catch (Exception ignored) {
+            // Best effort: without the locks the link is more fragile, not broken.
+        }
+    }
+
+    private void releaseLocks() {
+        try { if (wifiLock != null && wifiLock.isHeld()) wifiLock.release(); } catch (Exception ignored) { }
+        try { if (wakeLock != null && wakeLock.isHeld()) wakeLock.release(); } catch (Exception ignored) { }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -61,6 +104,7 @@ public class LinkService extends Service {
                nothing to hold open: stop rather than show a false
                "connected". */
             running = false;
+            releaseLocks();
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -95,6 +139,7 @@ public class LinkService extends Service {
             startForeground(NOTE_ID, note);
         }
         running = true;
+        holdLocks();
 
         /* NOT_STICKY: if the OS kills the process, the WebView and every link
            in it are gone too. Coming back on our own would only resurrect the
@@ -107,6 +152,7 @@ public class LinkService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         running = false;
+        releaseLocks();
         stopForeground(true);
         stopSelf();
         super.onTaskRemoved(rootIntent);
@@ -115,6 +161,7 @@ public class LinkService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+        releaseLocks();
         super.onDestroy();
     }
 

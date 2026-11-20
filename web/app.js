@@ -527,6 +527,12 @@
       this.presence = "connecting";
       this.lastBeat = 0;
       this.groupKeys = /* @__PURE__ */ new Map();
+      /* The channel can open before the session keys are derived (on a
+         reconnect it is often open already when it reaches us). Nothing is
+         sent, read or announced until they are. */
+      this.keysReady = new Promise((r) => {
+        this._keysOk = r;
+      });
       dc.binaryType = "arraybuffer";
     }
     async attachKeys(secret, localFp, remoteFp) {
@@ -534,6 +540,7 @@
       const k = await deriveSessionKeys(secret, localFp, remoteFp, uf(this.pc.localDescription), uf(this.pc.remoteDescription));
       this.sendKey = this.role === "inviter" ? k.a2b : k.b2a;
       this.recvKey = this.role === "inviter" ? k.b2a : k.a2b;
+      this._keysOk();
     }
     get open() {
       var _a;
@@ -541,6 +548,7 @@
     }
     async _send(type, payload, stream = 0) {
       if (!this.open) throw new Error("link is not open");
+      await this.keysReady;
       const body = payload instanceof Uint8Array ? payload : te2.encode(payload);
       const framed = new Uint8Array(body.length + 1);
       framed[0] = type;
@@ -581,6 +589,7 @@
       return id;
     }
     async handle(buf) {
+      await this.keysReady;
       const f = await unseal(this.recvKey, buf);
       if (f.stream === 0) {
         if (f.counter <= this.lastRecv) return;
@@ -724,17 +733,14 @@
     const link2 = new Link(peerId, pc, dc, role);
     links.set(peerId, link2);
     dc.onmessage = (ev) => link2.handle(ev.data).catch(() => emit("baddata", { peerId }));
-    dc.onopen = () => {
+    const announce = () => link2.keysReady.then(() => {
+      if (links.get(peerId) !== link2 || !link2.open) return;
       link2.setPresence("online");
       emit("linkopen", { peerId });
-    };
+    });
+    dc.onopen = announce;
     dc.onclose = () => link2.setPresence("offline");
-    if (dc.readyState === "open") {
-      queueMicrotask(() => {
-        link2.setPresence("online");
-        emit("linkopen", { peerId });
-      });
-    }
+    if (dc.readyState === "open") queueMicrotask(announce);
     pc.ontrack = (ev) => emit("track", { peerId, stream: ev.streams[0], track: ev.track });
     pc.onicecandidate = (ev) => {
       if (ev.candidate) emit("localice", { peerId, candidate: ev.candidate.toJSON() });
@@ -1535,6 +1541,14 @@
     return held;
   }
   var carryCount = async () => (await outbox()).length;
+  /* Normally everything waiting goes out the moment a link opens. If that one
+     attempt is lost (the link was replaced mid-send, say), try again every
+     30 seconds while links are open. The recipient ignores repeats. */
+  setInterval(() => {
+    if (!openLinks().length) return;
+    outbox().then((held) => held.length && carryFlush()).catch(() => {
+    });
+  }, 3e4);
 
   /* Grouped for reading aloud. Ambiguous characters are already absent from
      the base32 alphabet used elsewhere in the app. */
@@ -1589,6 +1603,7 @@
   typeof window !== "undefined" && window.__boot && window.__boot.mark("rejoin");
   var REJOIN_TTL = 45e3;
   var REJOIN_COOLDOWN = 2e4;
+  var REJOIN_FRESH = 12e4;
   var rejoinTries = /* @__PURE__ */ new Map();
   var rejoinPending = /* @__PURE__ */ new Map();
 
@@ -1626,6 +1641,44 @@
     return Date.now() - last > REJOIN_COOLDOWN;
   }
 
+  /* Build a sealed offer for a contact and remember it until it is answered or
+     goes stale. Shared by every way of carrying it: a relaying contact, or the
+     local network. */
+  async function rejoinMakeOffer(peerId) {
+    const old = rejoinPending.get(peerId);
+    if (old) {
+      try {
+        old.pc.close();
+      } catch (e) {
+      }
+      rejoinPending.delete(peerId);
+    }
+    rejoinTries.set(peerId, Date.now());
+    const pc = newPeerConnection();
+    const dc = pc.createDataChannel("cyanotype", { ordered: true });
+    await pc.setLocalDescription(await pc.createOffer());
+    await waitForIce(pc, 2500);
+    const payload = {
+      sdp: pc.localDescription.sdp,
+      at: Date.now(),
+      fp: certificate ? null : fpOf(pc)
+    };
+    const packed = await rejoinSeal(peerId, payload);
+    const entry = { pc, dc, role: "inviter", at: Date.now() };
+    rejoinPending.set(peerId, entry);
+    setTimeout(() => {
+      if (rejoinPending.get(peerId) === entry && !(link(peerId) || {}).open) {
+        try {
+          pc.close();
+        } catch (e) {
+        }
+        rejoinPending.delete(peerId);
+        emit("rejoinfail", { peerId });
+      }
+    }, REJOIN_TTL);
+    return packed;
+  }
+
   /* Start a reconnect to a peer we can no longer reach directly. */
   async function rejoinStart(peerId) {
     var _a;
@@ -1635,20 +1688,7 @@
     if (!relays.length) return "no-relay";
     const rec = await contact(peerId);
     if (!rec || !rec.secret) return "not-paired";
-
-    rejoinTries.set(peerId, Date.now());
-    const pc = newPeerConnection();
-    const dc = pc.createDataChannel("cyanotype", { ordered: true });
-    await pc.setLocalDescription(await pc.createOffer());
-    await waitForIce(pc, 2500);
-
-    const payload = {
-      sdp: pc.localDescription.sdp,
-      at: Date.now(),
-      fp: certificate ? null : fpOf(pc)
-    };
-    const packed = await rejoinSeal(peerId, payload);
-    rejoinPending.set(peerId, { pc, dc, role: "inviter", at: Date.now() });
+    const packed = await rejoinMakeOffer(peerId);
 
     let sent = 0;
     for (const l of relays) {
@@ -1659,17 +1699,6 @@
       }
     }
     emit("rejoinstart", { peerId, relays: sent });
-    setTimeout(() => {
-      const p = rejoinPending.get(peerId);
-      if (p && p.at === (rejoinPending.get(peerId) || {}).at && !(link(peerId) || {}).open) {
-        try {
-          p.pc.close();
-        } catch (e) {
-        }
-        rejoinPending.delete(peerId);
-        emit("rejoinfail", { peerId });
-      }
-    }, REJOIN_TTL);
     return sent ? "sent" : "no-relay";
   }
 
@@ -1686,37 +1715,59 @@
       }
       return;
     }
-    // We are the target. Only act on an offer from a contact we have paired
-    // with, and only when we are genuinely not already connected.
-    const rec = await contact(msg.from);
+    // We are the target: answer back through whoever can still reach them.
+    await rejoinIncoming(msg.from, msg.packed, (packed) => {
+      const back = { t: "rejoin", to: msg.from, from: selfId, packed, exp: Date.now() + REJOIN_TTL };
+      const direct = link(fromPeer);
+      if (direct == null ? void 0 : direct.open) direct.sendCtrl(back).catch(() => {
+      });
+      for (const l of relaysFor(msg.from)) {
+        if (l.peerId !== fromPeer) l.sendCtrl(back).catch(() => {
+        });
+      }
+    });
+  }
+
+  /* A sealed offer or answer meant for us, however it arrived. Only a contact
+     we paired with can make one we can open, and we act only while we are
+     genuinely not connected to them. fresh: also refuse an offer more than two
+     minutes old, for transports where a stranger could replay what they saw. */
+  async function rejoinIncoming(fromId, packed, reply, opts = {}) {
+    const rec = await contact(fromId);
     if (!rec || !rec.secret) return;
     let body;
     try {
-      body = await rejoinOpen(msg.from, msg.packed);
+      body = await rejoinOpen(fromId, packed);
     } catch (e) {
-      return emit("rejoinbad", { from: msg.from, reason: "could not be opened" });
+      return emit("rejoinbad", { from: fromId, reason: "could not be opened" });
     }
-    if (body.answer) return void rejoinAnswered(msg.from, body);
+    if (body.answer) return void rejoinAnswered(fromId, body);
     if (!body.sdp) return;
-    if ((link(msg.from) || {}).open) return;
+    if (opts.fresh && !(typeof body.at === "number" && Math.abs(Date.now() - body.at) < REJOIN_FRESH)) {
+      return emit("rejoinbad", { from: fromId, reason: "stale offer" });
+    }
+    if ((link(fromId) || {}).open) return;
+    /* Both phones asked at the same moment: keep the offer from the lower id,
+       on both sides, so exactly one link comes out of it. */
+    const mine = rejoinPending.get(fromId);
+    if (mine && mine.role === "inviter") {
+      if (mine.coded || selfId < fromId) return;
+      try {
+        mine.pc.close();
+      } catch (e) {
+      }
+      rejoinPending.delete(fromId);
+    }
 
     const pc = newPeerConnection();
-    pc.ondatachannel = (ev) => rejoinFinish(msg.from, pc, ev.channel, "joiner");
+    pc.ondatachannel = (ev) => rejoinFinish(fromId, pc, ev.channel, "joiner");
     await pc.setRemoteDescription({ type: "offer", sdp: body.sdp });
     await pc.setLocalDescription(await pc.createAnswer());
     await waitForIce(pc, 2500);
-    rejoinPending.set(msg.from, { pc, role: "joiner", at: Date.now() });
+    rejoinPending.set(fromId, { pc, role: "joiner", at: Date.now() });
 
-    const packed = await rejoinSeal(msg.from, { answer: true, sdp: pc.localDescription.sdp });
-    const back = { t: "rejoin", to: msg.from, from: selfId, packed, exp: Date.now() + REJOIN_TTL };
-    const direct = link(fromPeer);
-    if (direct == null ? void 0 : direct.open) direct.sendCtrl(back).catch(() => {
-    });
-    for (const l of relaysFor(msg.from)) {
-      if (l.peerId !== fromPeer) l.sendCtrl(back).catch(() => {
-      });
-    }
-    emit("rejoinanswering", { peerId: msg.from });
+    reply(await rejoinSeal(fromId, { answer: true, sdp: pc.localDescription.sdp, at: Date.now() }));
+    emit("rejoinanswering", { peerId: fromId });
   }
 
   async function rejoinAnswered(peerId, body) {
@@ -1728,6 +1779,8 @@
       await p.pc.setRemoteDescription({ type: "answer", sdp: body.sdp });
       rejoinFinish(peerId, p.pc, p.dc, "inviter");
     } catch (e) {
+      // An answer to an offer we had already replaced: wait for the right one.
+      p.answered = false;
       emit("rejoinbad", { from: peerId, reason: e.message });
     }
   }
@@ -1796,6 +1849,227 @@
     const m = (((_a = pc.remoteDescription) == null ? void 0 : _a.sdp) || "").match(/^a=fingerprint:sha-256 (.+)$/mi);
     return m ? m[1].split(":").map((h) => parseInt(h, 16)) : [];
   };
+
+  // lan.js — finding contacts again on the same Wi-Fi (Android wrapper only)
+  /* A web page cannot announce itself or listen on the local network, so the
+     wrapper does the finding (Android's network service discovery) and moves
+     lines of text over plain sockets. It understands none of them. Every
+     decision is made here: whether the other phone is a contact, whether it
+     proved it, and the sealed offer itself.
+
+     What a stranger on the same Wi-Fi can learn: that a Cyanotype phone is
+     there. The tags in a probe are keyed by a pairing secret and a fresh random
+     value, so they mean nothing to anyone else and never repeat. Both phones
+     prove they hold the shared secret before either sends an offer, and the
+     offer is sealed with the key from pairing, so a stranger can neither read
+     one nor make one. */
+  typeof window !== "undefined" && window.__boot && window.__boot.mark("lan");
+  var LAN_RETRY = 3e4;
+  var LAN_MAX_LINE = 32768;
+  var LAN_MAX_TAGS = 64;
+  var LAN_BG_WINDOW = 18e5;
+  var lanOn = false;
+  var lanPeers = /* @__PURE__ */ new Map();
+  var lanConns = /* @__PURE__ */ new Map();
+  /* Contacts whose link dropped while we were linked: the ones worth looking
+     for in the background. Contacts we have not seen this session are only
+     looked for while the app is in front. */
+  var lanDropped = /* @__PURE__ */ new Map();
+  var lanBg = "30";
+  var lanKeys = /* @__PURE__ */ new Map();
+  async function lanMac(rec, label) {
+    let k = lanKeys.get(rec.id);
+    if (!k) {
+      k = await crypto.subtle.importKey("raw", new Uint8Array(rec.secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      lanKeys.set(rec.id, k);
+    }
+    const mac = new Uint8Array(await crypto.subtle.sign("HMAC", k, te.encode("cyanotype/lan/v1|" + label)));
+    return b64(mac.subarray(0, 16));
+  }
+  var lanNonce = () => b64(crypto.getRandomValues(new Uint8Array(16)));
+  var lanUsable = (c) => c && c.secret && !(link(c.id) || {}).open;
+  /* Who to ask about: everyone missing while the app is in front, only the
+     recently dropped while it is in the background. */
+  async function lanWanted() {
+    const all = (await contacts()).filter((c) => lanUsable(c) && !rejoinPending.has(c.id));
+    return appAway() ? all.filter((c) => lanDropped.has(c.id)) : all;
+  }
+  function lanBgActive() {
+    if (!lanOn || !lanDropped.size || lanBg === "off") return false;
+    if (lanBg === "always") return true;
+    const latest = Math.max(...lanDropped.values());
+    return Date.now() - latest < LAN_BG_WINDOW;
+  }
+  function lanSend(conn, obj) {
+    const data = JSON.stringify(obj);
+    if (data.length > LAN_MAX_LINE) return Promise.resolve();
+    return NATIVE.lanSend({ conn, data }).catch(() => {
+    });
+  }
+  function lanDrop(conn) {
+    lanConns.delete(conn);
+    NATIVE.lanClose({ conn }).catch(() => {
+    });
+  }
+  /* The socket only carries the handshake. Once the offer and answer have
+     crossed it, the link itself runs over WebRTC, so it is closed either way. */
+  function lanTrack(conn, st) {
+    lanConns.set(conn, st);
+    setTimeout(() => {
+      if (lanConns.get(conn) === st) lanDrop(conn);
+    }, REJOIN_TTL + 5e3);
+    return st;
+  }
+  async function lanProbe(peer, force) {
+    if (!lanOn || appAway() && !lanBgActive()) return;
+    const p = lanPeers.get(peer);
+    if (!p || !force && Date.now() - p.lastProbe < LAN_RETRY) return;
+    const wanted = (await lanWanted()).slice(0, LAN_MAX_TAGS);
+    if (!wanted.length) return;
+    p.lastProbe = Date.now();
+    const n = lanNonce();
+    const tags = /* @__PURE__ */ new Map();
+    for (const c of wanted) tags.set(await lanMac(c, "probe|" + n), c.id);
+    let conn;
+    try {
+      ({ conn } = await NATIVE.lanConnect({ peer }));
+    } catch (e) {
+      return;
+    }
+    lanTrack(conn, { out: true, n, tags, ok: /* @__PURE__ */ new Set(), offers: 0 });
+    await lanSend(conn, { v: 1, t: "probe", n, h: [...tags.keys()] });
+  }
+  /* Two probes can cross (each phone found the other): one offer is enough,
+     and a second would only replace the first mid-handshake. Reserved before
+     the first await, because building an offer takes a moment. */
+  var lanOffering = /* @__PURE__ */ new Set();
+  async function lanOffer(conn, tag, id) {
+    if ((link(id) || {}).open || lanOffering.has(id)) return;
+    const mine = rejoinPending.get(id);
+    if (mine && Date.now() - mine.at < REJOIN_TTL) return;
+    lanOffering.add(id);
+    try {
+      const packed = await rejoinMakeOffer(id);
+      await lanSend(conn, { v: 1, t: "rejoin", h: tag, packed });
+      emit("rejoinstart", { peerId: id, lan: true });
+    } finally {
+      lanOffering.delete(id);
+    }
+  }
+  /* Lines on one connection are handled strictly in order: an offer that
+     overtook the proof before it would be refused. */
+  var lanChains = /* @__PURE__ */ new Map();
+  function lanQueue(conn, data) {
+    if (typeof conn !== "string") return;
+    const prev = lanChains.get(conn) || Promise.resolve();
+    const next = prev.then(() => lanFrame(conn, data)).catch(() => lanDrop(conn));
+    lanChains.set(conn, next);
+    next.then(() => {
+      if (lanChains.get(conn) === next) lanChains.delete(conn);
+    });
+  }
+  async function lanFrame(conn, data) {
+    if (typeof conn !== "string") return;
+    if (typeof data !== "string" || data.length > LAN_MAX_LINE) return lanDrop(conn);
+    let m;
+    try {
+      m = JSON.parse(data);
+    } catch (e) {
+      return lanDrop(conn);
+    }
+    if (!m || m.v !== 1 || typeof m.t !== "string") return lanDrop(conn);
+    const st = lanConns.get(conn) || lanTrack(conn, { out: false, tags: /* @__PURE__ */ new Map(), ok: /* @__PURE__ */ new Set(), offers: 0 });
+    const str = (x) => typeof x === "string" && x.length <= 64;
+    if (m.t === "probe") {
+      /* Someone asks whether we know any of these tags. Answer only for real
+         matches, each with a proof that we hold the same secret. */
+      if (st.out || st.n || !str(m.n) || !Array.isArray(m.h)) return lanDrop(conn);
+      st.n = m.n;
+      st.mine = lanNonce();
+      const asked = new Set(m.h.slice(0, LAN_MAX_TAGS).filter(str));
+      const proofs = [];
+      for (const c of await contacts()) {
+        if (!lanUsable(c)) continue;
+        const tag = await lanMac(c, "probe|" + st.n);
+        if (!asked.has(tag)) continue;
+        st.tags.set(tag, c.id);
+        proofs.push({ h: tag, p: await lanMac(c, "match|" + st.n + "|" + st.mine) });
+      }
+      if (!proofs.length) return lanDrop(conn);
+      await lanSend(conn, { v: 1, t: "match", n: st.mine, m: proofs });
+      return;
+    }
+    if (m.t === "match") {
+      /* They claim to know some of our contacts: check each proof, prove
+         ourselves back, and the lower id of each pair sends the offer. */
+      if (!st.out || st.theirs || !str(m.n) || !Array.isArray(m.m)) return lanDrop(conn);
+      st.theirs = m.n;
+      const back = [];
+      for (const it of m.m.slice(0, LAN_MAX_TAGS)) {
+        const id = it && str(it.h) && st.tags.get(it.h);
+        const rec = id && await contact(id);
+        if (!lanUsable(rec) || !str(it.p) || it.p !== await lanMac(rec, "match|" + st.n + "|" + st.theirs)) continue;
+        st.ok.add(it.h);
+        back.push({ h: it.h, p: await lanMac(rec, "confirm|" + st.theirs) });
+      }
+      if (!back.length) return lanDrop(conn);
+      await lanSend(conn, { v: 1, t: "confirm", m: back });
+      for (const h of st.ok) if (selfId < st.tags.get(h)) lanOffer(conn, h, st.tags.get(h)).catch(() => {
+      });
+      return;
+    }
+    if (m.t === "confirm") {
+      if (st.out || !st.mine || st.confirmed || !Array.isArray(m.m)) return lanDrop(conn);
+      st.confirmed = true;
+      for (const it of m.m.slice(0, LAN_MAX_TAGS)) {
+        const id = it && str(it.h) && st.tags.get(it.h);
+        const rec = id && await contact(id);
+        if (!lanUsable(rec) || !str(it.p) || it.p !== await lanMac(rec, "confirm|" + st.mine)) continue;
+        st.ok.add(it.h);
+        if (selfId < id) lanOffer(conn, it.h, id).catch(() => {
+        });
+      }
+      if (!st.ok.size) lanDrop(conn);
+      return;
+    }
+    if (m.t === "rejoin") {
+      const id = str(m.h) && st.ok.has(m.h) && st.tags.get(m.h);
+      if (!id || typeof m.packed !== "string" || ++st.offers > 2 * LAN_MAX_TAGS) return lanDrop(conn);
+      await rejoinIncoming(id, m.packed, (packed) => lanSend(conn, { v: 1, t: "rejoin", h: m.h, packed }), { fresh: true });
+      return;
+    }
+    lanDrop(conn);
+  }
+  /* Called on a timer, when a link drops, and when the app comes to the front. */
+  function lanSweep(force) {
+    if (!lanOn) return;
+    for (const peer of lanPeers.keys()) lanProbe(peer, force).catch(() => {
+    });
+  }
+  function lanWire() {
+    if (!NATIVE || typeof NATIVE.lanStart !== "function") return;
+    NATIVE.addListener("lanPeer", (d) => {
+      if (!d || typeof d.peer !== "string") return;
+      if (!d.found) return void lanPeers.delete(d.peer);
+      if (!lanPeers.has(d.peer)) lanPeers.set(d.peer, { lastProbe: 0 });
+      lanProbe(d.peer).catch(() => {
+      });
+    });
+    NATIVE.addListener("lanFrame", (d) => {
+      if (d) lanQueue(d.conn, d.data);
+    });
+    NATIVE.addListener("lanClosed", (d) => {
+      if (d) lanConns.delete(d.conn);
+    });
+    lanOn = true;
+    NATIVE.lanStart().catch(() => {
+      lanOn = false;
+    });
+    setInterval(() => {
+      lanSweep(false);
+      syncService();
+    }, LAN_RETRY);
+  }
 
   // geo.js
   typeof window !== "undefined" && window.__boot && window.__boot.mark("geo");
@@ -2826,13 +3100,40 @@
     updateChatPresence();
   });
   on("linkopen", (ev) => {
+    lanDropped.delete(ev.detail.peerId);
+    // Any other reconnect still in flight for them is now beside the point.
+    const stale = rejoinPending.get(ev.detail.peerId);
+    if (stale && stale.pc !== (link(ev.detail.peerId) || {}).pc) {
+      try {
+        stale.pc.close();
+      } catch (e) {
+      }
+      rejoinPending.delete(ev.detail.peerId);
+    }
+    batteryNudge().catch(() => {
+    });
     status("linked", "live");
     updateChatPresence();
     renderHome();
     carryFlush(ev.detail.peerId).catch(() => {
     });
   });
+  /* A link can end from either side: we closed it (linkclosed), or it went
+     quiet or the other phone closed it (presence goes offline). Either way the
+     contact is worth looking for. */
+  function lanLost(peerId) {
+    if ((link(peerId) || {}).open || lanDropped.has(peerId)) return;
+    lanDropped.set(peerId, Date.now());
+    setTimeout(() => {
+      lanSweep(true);
+      syncService();
+    }, 3e3);
+  }
+  on("presence", (ev) => {
+    if (ev.detail.state === "offline") lanLost(ev.detail.peerId);
+  });
   on("linkclosed", (ev) => {
+    lanLost(ev.detail.peerId);
     updateChatPresence();
     renderHome();
     if (callPeer() === ev.detail.peerId) callEnd("The link dropped", false);
@@ -3099,7 +3400,11 @@
     const node = $("log").querySelector(`.msg[data-id="${m.id}"] .ticks`);
     if (!node) return;
     node.className = "ticks " + m.state;
-    node.textContent = m.state === "sent" ? "\u2713" : "\u2713\u2713";
+    node.textContent = m.state === "queued" ? "\u25CB" : m.state === "sent" ? "\u2713" : "\u2713\u2713";
+    node.title = { queued: "waiting to be sent", sent: "sent", delivered: "delivered to their phone", read: "opened" }[m.state] || m.state;
+    // A queued bubble is drawn faded; it stops being queued once it is sent.
+    const wrap = node.closest(".msg");
+    if (wrap) wrap.classList.toggle("queued", m.state === "queued");
   }
   /* Receipts are only meaningful one-to-one. In a group "delivered" would have
      to mean delivered to whom, so groups get no ticks at all. */
@@ -3202,7 +3507,7 @@
   var svcTimer = null;
   function wantService() {
     for (const l of links.values()) if (l.open || l.presence === "away") return true;
-    return !!call || !!locShare;
+    return !!call || !!locShare || lanBgActive();
   }
   function syncService() {
     if (!NATIVE) return;
@@ -3210,7 +3515,8 @@
       clearTimeout(svcTimer);
       svcTimer = null;
       const n = openLinks().length;
-      const text = n ? `Linked to ${n} ${n === 1 ? "person" : "people"}` : "Reconnecting\u2026";
+      const lost = [...lanDropped.keys()].filter((id) => !(link(id) || {}).open).length;
+      const text = n ? `Linked to ${n} ${n === 1 ? "person" : "people"}` : lost && lanBgActive() ? `Looking for ${lost === 1 ? "a contact" : lost + " contacts"} on this Wi-Fi` : "Reconnecting\u2026";
       if (svcOn && text === svcText) return;
       // Android refuses this from the background; the next resume retries.
       NATIVE.start({ text }).then(() => {
@@ -3235,8 +3541,17 @@
       nativeAway = !(d && d.active);
       // Let every visibility listener re-check against the real state.
       document.dispatchEvent(new Event("visibilitychange"));
-      if (!nativeAway) syncService();
+      if (!nativeAway) {
+        syncService();
+        lanSweep(true);
+        if ($("s-settings").classList.contains("on")) paintBackground();
+      }
     });
+    getSetting("lanBg").then((v) => {
+      if (v === "off" || v === "30" || v === "always") lanBg = v;
+    }).catch(() => {
+    });
+    lanWire();
     NATIVE.addListener("open", (d) => {
       if (d && d.convId) openChat(d.convId);
     });
@@ -3626,6 +3941,58 @@
       seg.append(b);
     }
     paintStats();
+    paintBackground();
+  }
+  /* ---- staying connected with the screen off (Android wrapper only) ---- */
+  var LAN_BG_CHOICES = [["off", "Off"], ["30", "30 minutes"], ["always", "Until found"]];
+  async function paintBackground() {
+    const group = $("bgGroup");
+    if (!NATIVE || typeof NATIVE.batteryStatus !== "function") return void group.classList.add("hide");
+    group.classList.remove("hide");
+    const st = await NATIVE.batteryStatus().catch(() => null);
+    const exempt = !!(st && st.exempt);
+    $("batteryState").textContent = exempt ? "On. Android lets Cyanotype keep its links open while the phone is locked." : "Off. Android may cut Cyanotype off while the phone is locked, which drops the link to your contacts.";
+    $("batteryBtn").classList.toggle("hide", exempt);
+    const seg = $("lanSeg");
+    seg.innerHTML = "";
+    for (const [v, label] of LAN_BG_CHOICES) {
+      const b = el("button", v === lanBg ? "sel" : "", label);
+      b.onclick = async () => {
+        lanBg = v;
+        await putSetting("lanBg", v);
+        syncService();
+        paintBackground();
+      };
+      seg.append(b);
+    }
+  }
+  async function askBattery() {
+    const r = await NATIVE.requestBatteryExemption();
+    if (r && r.exempt) toast("Already allowed");
+  }
+  /* Asked once, the first time a link opens: that is when it starts to matter. */
+  async function batteryNudge() {
+    if (!NATIVE || typeof NATIVE.batteryStatus !== "function") return;
+    if (await getSetting("batteryAsked")) return;
+    const st = await NATIVE.batteryStatus().catch(() => null);
+    if (!st || st.exempt) return;
+    await putSetting("batteryAsked", true);
+    /* Not over the safety-number check or another question: wait for a quiet
+       moment on the chat list or a chat. */
+    const tryShow = (left) => {
+      const scr = document.querySelector(".screen.on");
+      if ($("menuSheet").classList.contains("on") || !scr || scr.id !== "s-home" && scr.id !== "s-chat") {
+        if (left > 0) setTimeout(() => tryShow(left - 1), 3e3);
+        return;
+      }
+      sheet({
+        eyebrow: "Staying connected",
+        title: "Keep links open with the screen off?",
+        text: "Android saves battery by cutting apps off while the phone is locked, and that drops the link to your contacts. Letting Cyanotype skip battery optimisation keeps it connected, at the cost of a little more battery while a link is open. You can change this later in Settings.",
+        actions: [{ label: "Allow", sub: "Android asks you to confirm", run: askBattery }]
+      });
+    };
+    setTimeout(() => tryShow(20), 2500);
   }
   async function paintStats() {
     const st = await storeStats().catch(() => null);
@@ -3711,6 +4078,7 @@
       return fn(...a);
     };
     $("tabChats").onclick = () => switchTab("chats");
+    $("batteryBtn").onclick = () => askBattery().catch((e) => toast(e.message || String(e), true));
     $("tabContacts").onclick = () => switchTab("contacts");
     $("btnInvite").onclick = guard(() => startInvite(null));
     $("btnJoin").onclick = guard(startJoin);

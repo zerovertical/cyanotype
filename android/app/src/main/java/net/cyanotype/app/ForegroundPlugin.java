@@ -7,12 +7,15 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.provider.MediaStore;
 import android.util.Base64;
 
@@ -40,6 +43,8 @@ import java.util.UUID;
    - holding the process open while links are live (start / stop / keepVisible)
    - real notifications (the WebView has no Notification API at all)
    - saving received files (the WebView ignores <a download>)
+   - staying connected with the screen off (battery optimisation)
+   - finding contacts again on the same Wi-Fi (see LanLink)
 
    The page decides when each of these happens. The wrapper never guesses. */
 @CapacitorPlugin(
@@ -193,6 +198,143 @@ public class ForegroundPlugin extends Plugin {
         JSObject out = new JSObject();
         out.put("running", false);
         call.resolve(out);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Staying connected with the screen off                              */
+    /* ------------------------------------------------------------------ */
+
+    /* Doze cuts an app's network off while the phone is locked, foreground
+       service or not, unless the user has let it skip battery optimisation.
+       Only the user can grant that; the page asks once and explains why. */
+    private boolean batteryExempt() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true;
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        return pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName());
+    }
+
+    @PluginMethod
+    public void batteryStatus(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("exempt", batteryExempt());
+        call.resolve(out);
+    }
+
+    @PluginMethod
+    public void requestBatteryExemption(PluginCall call) {
+        JSObject out = new JSObject();
+        if (batteryExempt()) {
+            out.put("exempt", true);
+            call.resolve(out);
+            return;
+        }
+        try {
+            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        } catch (Exception e) {
+            // Some phones hide the direct prompt; the full list still works.
+            try {
+                Intent j = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                j.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(j);
+            } catch (Exception e2) {
+                call.reject("This phone would not open its battery settings. Look for Cyanotype under Settings, Apps, Battery.");
+                return;
+            }
+        }
+        // The answer comes later: the page checks again when it is back in front.
+        out.put("exempt", false);
+        call.resolve(out);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Finding contacts on the same Wi-Fi                                 */
+    /* ------------------------------------------------------------------ */
+
+    private LanLink lan;
+
+    private synchronized LanLink lan() {
+        if (lan == null) {
+            lan = new LanLink(getContext(), new LanLink.Events() {
+                @Override public void peer(String peer, boolean found) {
+                    JSObject d = new JSObject();
+                    d.put("peer", peer);
+                    d.put("found", found);
+                    notifyListeners("lanPeer", d);
+                }
+                @Override public void frame(String conn, String data) {
+                    JSObject d = new JSObject();
+                    d.put("conn", conn);
+                    d.put("data", data);
+                    notifyListeners("lanFrame", d);
+                }
+                @Override public void closed(String conn) {
+                    JSObject d = new JSObject();
+                    d.put("conn", conn);
+                    notifyListeners("lanClosed", d);
+                }
+            });
+        }
+        return lan;
+    }
+
+    @PluginMethod
+    public void lanStart(PluginCall call) {
+        try {
+            String name = lan().start();
+            JSObject out = new JSObject();
+            out.put("name", name);
+            call.resolve(out);
+        } catch (Exception e) {
+            call.reject("Could not look for phones on this network: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void lanStop(PluginCall call) {
+        lan().stop();
+        call.resolve();
+    }
+
+    /* Connecting can take a few seconds, so it never runs on the bridge thread. */
+    @PluginMethod
+    public void lanConnect(final PluginCall call) {
+        final String peer = call.getString("peer");
+        if (peer == null) { call.reject("No phone named."); return; }
+        new Thread(() -> {
+            try {
+                String conn = lan().connect(peer);
+                JSObject out = new JSObject();
+                out.put("conn", conn);
+                call.resolve(out);
+            } catch (Exception e) {
+                call.reject("Could not reach that phone: " + e.getMessage());
+            }
+        }, "cyanotype-lan-connect").start();
+    }
+
+    @PluginMethod
+    public void lanSend(PluginCall call) {
+        try {
+            lan().send(call.getString("conn", ""), call.getString("data", ""));
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void lanClose(PluginCall call) {
+        lan().close(call.getString("conn", ""));
+        call.resolve();
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (lan != null) lan.stop();
+        super.handleOnDestroy();
     }
 
     /* ------------------------------------------------------------------ */

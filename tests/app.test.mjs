@@ -36,6 +36,9 @@ const nativeMock = `
     showAlert: () => ({ shown: true }), requestAlerts: () => ({ granted: true }),
     saveStart: () => ({ id: "s1" }), saveFinish: () => ({ savedAs: "Downloads/Cyanotype/test.bin" }),
     launchTarget: () => ({}), clearAlert: () => ({}), saveChunk: () => ({}), saveAbort: () => ({}),
+    // Already allowed, so the one-off battery question stays out of these flows
+    // (tests/lan.test.mjs covers it).
+    batteryStatus: () => ({ exempt: true }),
   };
   window.Capacitor = { Plugins: { Foreground: new Proxy({}, { get: (t, name) => {
     if (name === "addListener") return (ev, fn) => { (window.__native.listeners[ev] = window.__native.listeners[ev] || []).push(fn); return Promise.resolve({ remove() {} }); };

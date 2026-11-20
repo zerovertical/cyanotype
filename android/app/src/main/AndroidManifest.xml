@@ -57,9 +57,15 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- For NSD peer discovery later -->
+    <!-- Finding contacts again on the same Wi-Fi (LanLink): network service
+         discovery, plus a multicast lock so it still works with the screen off. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+    <!-- Staying connected with the screen off: Wi-Fi and wake locks while a link
+         is open, and asking the user to let the app skip battery optimisation. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

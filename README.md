@@ -94,6 +94,26 @@ Linked to 2 people" notification. Android requires that notification; it cannot
 be hidden. When the last link has been gone for 90 seconds the service stops
 and the notification goes away.
 
+**Keeping the link up with the screen off.** While the service runs it also
+stops Wi-Fi power-saving and keeps the processor awake, so the link's
+keep-alive checks keep getting answered. Android only honours this in deep
+sleep if Cyanotype is allowed to skip battery optimisation, so the first time
+a link opens the app asks once. You can change it later in Settings →
+*Staying connected*.
+
+**Reconnecting by itself on the same Wi-Fi.** If a link drops, the phones find
+each other again on the local network and reconnect without codes. Each phone
+announces itself under a random name, and asks the others about the contacts it
+is missing using one-off tags that only a phone holding the same pairing secret
+can recognise. Both phones prove they hold that secret before either sends an
+offer, and the offer is sealed with the pairing key, so a stranger on the same
+Wi-Fi learns only that a Cyanotype phone is there. The app always looks while
+it is open. After a link drops it keeps looking in the background for 30
+minutes by default (Settings → *Staying connected*: Off, 30 minutes or Until
+found), and the notification says "Looking for a contact on this Wi-Fi" while
+it does. Some routers keep devices apart ("client isolation" or a guest
+network); there the phones cannot see each other and you fall back to codes.
+
 **Notifications.** New messages, files, location shares and missed calls show
 as normal phone notifications while the app is in the background. Each chat has
 one notification that updates ("Sam (3 new)") rather than piling up. Messages
@@ -155,9 +175,12 @@ To test the service, use Part B.
 minutes. Unlock.
 
 - Still connected, messages waiting → working.
-- Reconnected by itself → the app was stopped, but automatic reconnection caught it.
-- Asking for a code → the app was stopped and no other contact was around to
-  route the reconnection through.
+- Reconnected by itself → the link dropped, but the phones found each other
+  again on the Wi-Fi (or through another contact).
+- Asking for a code → neither could reach the other: different networks, a
+  router that keeps devices apart, or background looking switched off or
+  timed out with both apps in the background. Opening the app on both phones
+  should reconnect them.
 
 Chromium, the engine inside the app, slows down pages it thinks are hidden and
 after about five minutes may stop them altogether, even with the service
@@ -176,7 +199,7 @@ Check Settings → Battery afterwards: holding a link open costs real power.
     npm install
     npm test
 
-This runs two suites in your installed Chrome, using simulated phones that
+This runs three suites in your installed Chrome, using simulated phones that
 pair over a real local connection:
 
 - `tests/app.test.mjs` — pairing, messaging, notifications, files, contacts,
@@ -184,6 +207,14 @@ pair over a real local connection:
 - `tests/security.test.mjs` — four simulated phones, one of them hostile,
   attack each security fix in turn: forged senders, group takeovers, fake
   delivery notes, oversized files, a stranger hanging up your call, and more.
+- `tests/lan.test.mjs` — reconnecting on the same Wi-Fi. The script plays the
+  part of Android's network discovery and sockets. It drops links and checks
+  the phones find each other again, that a queued message then goes out, that
+  a stranger on the network (made-up probes, replayed probes and offers, junk
+  lines) gets nothing, the battery question, and the background settings.
+
+The Android side of discovery (`LanLink.java`) can only be tested on real
+phones: pair two, turn one's Wi-Fi off and on, and watch them reconnect.
 
 Set `CHROME_PATH` if Chrome is not installed in the usual place.
 
@@ -191,8 +222,10 @@ Set `CHROME_PATH` if Chrome is not installed in the usual place.
 
 ## Not done yet
 
-- **Finding nearby phones automatically** (removing the typed reconnect code).
-  The Android permissions for it are already in place.
+- **Reconnecting across different networks** without a contact in between or
+  codes. Same-Wi-Fi reconnection is automatic from 1.4.0.
+- **Automatic reconnection in the browser version.** A web page cannot look
+  for other phones on the network, so only the Android app does this.
 - **Removing someone from a group.** You can delete a group from your own phone,
   but the host cannot yet remove a member.
 - **Update checks.** The app does not tell you when a new release is out. See

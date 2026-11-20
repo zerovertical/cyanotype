@@ -8,7 +8,7 @@
    3. The swap happens when the page says so, not mid-call.
 */
 
-const VERSION = 'v12';
+const VERSION = 'v13';
 const CACHE = 'cyanotype-' + VERSION;
 
 /* CORE must land or the install fails outright, which leaves the previous
